@@ -1,0 +1,282 @@
+{
+  "newspaper_id": "aditya_bharat_hindi",
+  "newspaper_name_hi": "आदित्य भारत",
+  "newspaper_name_en": "Aditya Bharat",
+  "language": "hi-IN",
+  "script": "Devanagari",
+  "total_pages": 8,
+  "version": "2.0.0",
+  "studio_port": 2424,
+  "page_designer_rpc_port": 47123,
+  "editable_stylesheet_mode": true,
+  "grid_and_page_geometry": {
+    "print_area_width_cm": 32.0,
+    "print_area_height_cm": 51.0,
+    "print_area_fixed": true,
+    "outer_margins_cm": {
+      "top": 1.0,
+      "bottom": 1.0,
+      "left": 1.0,
+      "right": 1.0
+    },
+    "total_page_width_cm": 34.0,
+    "total_page_height_cm": 53.0,
+    "columns": 8,
+    "column_width_cm": 3.625,
+    "gutter_mm": 4.0,
+    "baseline_grid_pt": 11.25,
+    "baseline_locked": true,
+    "vertical_column_rules_allowed": false
+  },
+  "prepress_and_cmyk_separation": {
+    "pdf_color_space": "CMYK",
+    "all_pictures_color_space": "CMYK",
+    "pictures_min_dpi": 300,
+    "default_text_plate": {
+      "swatch": "[Black]",
+      "cmyk": [0, 0, 0, 100],
+      "overprint_black": true,
+      "strict_single_plate_k": true
+    },
+    "custom_colored_text_allowed": true
+  },
+  "mastheads": {
+    "front_page_masthead": {
+      "page": 1,
+      "height_cm": 6.0,
+      "y_range_cm": [1.0, 7.0],
+      "status": "reserved_space_ready"
+    },
+    "inside_pages_masthead": {
+      "pages": [2, 3, 4, 5, 6, 7, 8],
+      "height_cm": 1.5,
+      "y_range_cm": [1.0, 2.5],
+      "layout": {
+        "left": {
+          "type": "red_box_section_name",
+          "box_fill": "FlyerCrimson (#c4121a)",
+          "font_family": "DB Hindi 6",
+          "font_size_pt": 20.0,
+          "text_color": "[Paper]"
+        },
+        "center": {
+          "type": "official_logo",
+          "text": "आदित्य भारत",
+          "font_family": "DB Rasrand Bold",
+          "font_size_pt": 28.0,
+          "color": "[Black]"
+        },
+        "right": {
+          "dateline": {
+            "font_family": "DB Hindi",
+            "font_style": "Bold",
+            "font_size_pt": 16.0,
+            "color": "[Black]"
+          },
+          "page_number": {
+            "font_family": "Times New Roman",
+            "font_style": "Bold",
+            "font_size_pt": 18.0,
+            "color": "[Black]"
+          }
+        },
+        "bottom_closing_rule": {
+          "weight_pt": 2.0,
+          "color": "[Black]",
+          "tint": 0.60
+        }
+      }
+    }
+  },
+  "fonts": {
+    "headline": {
+      "family": "DB Rasrand Bold",
+      "display_name": "DB RASRANG BOLD",
+      "style": "Bold",
+      "leading_rule": "pt + 1.0",
+      "minimum_story_headline_pt": 30.0,
+      "color": "[Black]",
+      "cmyk": [0, 0, 0, 100],
+      "allow_red_headline": false
+    },
+    "box_headline": {
+      "family": "DB Rasrand Bold",
+      "style": "Bold",
+      "default_point_size": 16.0,
+      "default_leading": 17.0,
+      "package_point_size_range": [18.0, 24.0],
+      "leading_rule": "pt + 1.0",
+      "color": "[Black]",
+      "cmyk": [0, 0, 0, 100],
+      "allow_red_headline": false
+    },
+    "body": {
+      "family": "DB Hindi",
+      "style": "Regular",
+      "point_size": 11.0,
+      "leading": 11.25,
+      "grid_align": "allLines",
+      "color": "[Black]",
+      "cmyk": [0, 0, 0, 100]
+    },
+    "caption": {
+      "family": "DB Hindi 7",
+      "point_size": 10.0,
+      "leading": 10.2,
+      "color": "[Black]",
+      "cmyk": [0, 0, 0, 100]
+    },
+    "subhead": {
+      "family": "DB Hindi",
+      "style": "Bold",
+      "flyer_top_subhead_pt": 18.0,
+      "placement_options": ["above_headline", "below_headline"],
+      "color": "[Black]",
+      "cmyk": [0, 0, 0, 100],
+      "allow_red_subhead": false
+    },
+    "byline": {
+      "family": "DB Hindi",
+      "style": "Bold",
+      "city_color": "[Black]",
+      "pipe_color": "FlyerCrimson",
+      "pipe_char": "|",
+      "agency_color": "ClosingGray",
+      "bottom_rule": {
+        "enabled": true,
+        "weight_pt": 0.85,
+        "color": "ClosingGray"
+      }
+    },
+    "subject_red_blurb": {
+      "family": "DB Hindi 6",
+      "style": "Bold",
+      "point_size": 22.0,
+      "text_color": "[Paper]",
+      "box_fill": "FlyerCrimson",
+      "bottom_rule": {
+        "enabled": true,
+        "weight_pt": 3.0,
+        "color": "ClosingGray"
+      },
+      "wrap_mode": "wrapAroundBoundingBox"
+    }
+  },
+  "locked_layout_rules": [
+    "प्रिंट एरिया 32.0 × 51.0 cm (1-1-1-1 cm मार्जिन, कुल पेज 34.0 × 53.0 cm) 100% फिक्स।",
+    "किसी भी स्टोरी की हेडलाइन 30.0 pt (DB Rasrand Bold, 100% Black) से कम नहीं होगी; लाल हेडलाइन वर्जित।",
+    "पूरे अखबार (Page 01 से Page 08) में कहीं भी खड़ी रूल (Vertical Divider Rule) नहीं लगेगी।",
+    "लीड स्टोरी में फुल-हाइट 40% Gray बॉक्स हमेशा लीड के आखिरी कॉलम (Col 5 या Col 6/8) में लगेगा, कभी भी Col 1 से पहले नहीं।",
+    "सभी फोटो कॉम्पैक्ट और संतुलित साइज में रहेंगे तथा नीचे साफ बॉडी अंडरफ्लो (Underflow Lines) और कसा हुआ बॉटम एंकर रहेगा।"
+  ],
+  "pages": {
+    "page_01": {
+      "page_number": 1,
+      "folio": "01",
+      "name_hi": "फ्रंट पेज (Option 1 — Master)",
+      "section_label": "मुख्य पृष्ठ",
+      "script": "build_aditya_bharat_page1.py",
+      "pagedesigner_file": "Aditya_Bharat_Page_01_34x53.pagedesigner",
+      "png_file": "Aditya_Bharat_Page_01_34x53.png",
+      "pdf_file": "Aditya_Bharat_Page_01_CMYK_34x53.pdf",
+      "story_count": 7,
+      "layout_summary": "6.0 cm मास्टहेड + 8-Col फ्लायर (12.5 cm) + 5-Col लीड व दाएं 3-Col स्टैक + 1+5+2 बॉटम एंकर"
+    },
+    "page_01_opt2": {
+      "page_number": 1,
+      "folio": "01 (Opt-2)",
+      "name_hi": "फ्रंट पेज (Option 2 — Variant)",
+      "section_label": "मुख्य पृष्ठ (विकल्प 2)",
+      "script": "build_aditya_bharat_page1_option2.py",
+      "pagedesigner_file": "Aditya_Bharat_Page_01_Option2_34x53.pagedesigner",
+      "png_file": "Aditya_Bharat_Page_01_Option2_34x53.png",
+      "pdf_file": "Aditya_Bharat_Page_01_Option2_CMYK_34x53.pdf",
+      "story_count": 7,
+      "layout_summary": "6.0 cm मास्टहेड + 8-Col फ्लायर + 5-Col लीड पैकेज (विकल्प 2) + 1+5+2 बॉटम एंकर"
+    },
+    "page_02": {
+      "page_number": 2,
+      "folio": "02",
+      "name_hi": "महानगर (सिटी पेज 1)",
+      "section_label": "महानगर",
+      "script": "build_aditya_bharat_page2.py",
+      "pagedesigner_file": "Aditya_Bharat_Page_02_Mahanagar_34x53.pagedesigner",
+      "png_file": "Aditya_Bharat_Page_02_Mahanagar_34x53.png",
+      "pdf_file": "Aditya_Bharat_Page_02_Mahanagar_CMYK_34x53.pdf",
+      "story_count": 8,
+      "layout_summary": "1.5 cm रनिंग मास्टहेड + 8-Col सिटी फ्लायर + 5-Col लीड + 3-Col रिवरफ्रंट + 2+4+2 मिड बैंड + 2+6 सिटी एंकर"
+    },
+    "page_03": {
+      "page_number": 3,
+      "folio": "03",
+      "name_hi": "प्रादेशिक (Vertical-Start Layout)",
+      "section_label": "प्रादेशिक",
+      "script": "build_aditya_bharat_page3.py",
+      "pagedesigner_file": "Aditya_Bharat_Page_03_Pradeshik_34x53.pagedesigner",
+      "png_file": "Aditya_Bharat_Page_03_Pradeshik_34x53.png",
+      "pdf_file": "Aditya_Bharat_Page_03_Pradeshik_CMYK_34x53.pdf",
+      "story_count": 11,
+      "layout_summary": "बिना टॉप फ्लायर के सीधा बाएं 5-Col वर्टिकल लीड (आखिरी Col 5 में Gray Box) + दाएं 3-Col वर्टिकल स्टैक + 2+4+2 मिड + 6+2 बॉटम एंकर"
+    },
+    "page_04": {
+      "page_number": 4,
+      "folio": "04",
+      "name_hi": "संपादकीय (Editorial & Opinion)",
+      "section_label": "संपादकीय",
+      "script": "build_aditya_bharat_page5_edit.py",
+      "pagedesigner_file": "Aditya_Bharat_Page_04_Sampadakiya_34x53.pagedesigner",
+      "png_file": "Aditya_Bharat_Page_04_Sampadakiya_34x53.png",
+      "pdf_file": "Aditya_Bharat_Page_04_Sampadakiya_CMYK_34x53.pdf",
+      "story_count": 8,
+      "layout_summary": "बाएं 2-Col संपादकीय रेल (संपादकीय 1, संपादकीय 2, ऊर्जा स्तंभ) + दाएं 6-Col मंथन आलेख + 4+2 विशेष विश्लेषण व स्तंभ + 3+3 पाठकों के पत्र व इतिहास"
+    },
+    "page_05": {
+      "page_number": 5,
+      "folio": "05",
+      "name_hi": "राष्ट्रीय (National Page)",
+      "section_label": "राष्ट्रीय",
+      "script": "build_aditya_bharat_page4.py",
+      "pagedesigner_file": "Aditya_Bharat_Page_05_Rashtriya_34x53.pagedesigner",
+      "png_file": "Aditya_Bharat_Page_05_Rashtriya_34x53.png",
+      "pdf_file": "Aditya_Bharat_Page_05_Rashtriya_CMYK_34x53.pdf",
+      "story_count": 8,
+      "layout_summary": "8-Col टॉप फ्लायर + 6-Col मेन लीड (आखिरी Col 6 में Gray Box) + दाएं 2-Col खबर + 3+3+2 इंटरलॉक बैंड + 5+3 बॉटम एंकर"
+    },
+    "page_06": {
+      "page_number": 6,
+      "folio": "06",
+      "name_hi": "कारोबार (Business & Economy)",
+      "section_label": "कारोबार",
+      "script": "build_aditya_bharat_page6_business.py",
+      "pagedesigner_file": "Aditya_Bharat_Page_06_Karobar_34x53.pagedesigner",
+      "png_file": "Aditya_Bharat_Page_06_Karobar_34x53.png",
+      "pdf_file": "Aditya_Bharat_Page_06_Karobar_CMYK_34x53.pdf",
+      "story_count": 10,
+      "layout_summary": "बाएं 2-Col मार्केट रेल (बाजार मीटर + कॉरपोरेट + सर्राफा) + दाएं 6-Col टॉप फ्लायर + 6-Col लीड (Col 8 में Gray Box) + 3+3 मिड + 5+3 स्टार्टअप एंकर"
+    },
+    "page_07": {
+      "page_number": 7,
+      "folio": "07",
+      "name_hi": "खेल संसार (Sports — 12 Stories)",
+      "section_label": "खेल संसार",
+      "script": "build_aditya_bharat_page7_sports.py",
+      "pagedesigner_file": "Aditya_Bharat_Page_07_Khel_Sansar_34x53.pagedesigner",
+      "png_file": "Aditya_Bharat_Page_07_Khel_Sansar_34x53.png",
+      "pdf_file": "Aditya_Bharat_Page_07_Khel_Sansar_CMYK_34x53.pdf",
+      "story_count": 12,
+      "layout_summary": "No-Flyer Asymmetric Sports: बाएं 3-Col स्टैक + दाएं 5-Col मेन लीड (3-Col बड़ा एक्शन फोटो + Col 8 में स्कोरकार्ड) + 4+4 मिड + 2+3+3 लोअर + 5+3 एंकर"
+    },
+    "page_08": {
+      "page_number": 8,
+      "folio": "08",
+      "name_hi": "देश-विदेश (Back Page — 12 Stories)",
+      "section_label": "देश-विदेश",
+      "script": "build_aditya_bharat_page8_desh_videsh.py",
+      "pagedesigner_file": "Aditya_Bharat_Page_08_Desh_Videsh_34x53.pagedesigner",
+      "png_file": "Aditya_Bharat_Page_08_Desh_Videsh_34x53.png",
+      "pdf_file": "Aditya_Bharat_Page_08_Desh_Videsh_CMYK_34x53.pdf",
+      "story_count": 12,
+      "layout_summary": "8-Col कूटनीति फ्लायर + बाएं 5-Col सामरिक लीड (Col 5 में Gray Box) + दाएं 3-Col लंबा फीचर + 4+2 / 2+4 इंटरलॉक + 4+4 बैंड + 3+5 नासा-इसरो एंकर"
+    }
+  }
+}
