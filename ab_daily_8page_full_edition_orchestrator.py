@@ -678,6 +678,17 @@ def run_1030pm_night_desk_auto_edition_job(
                 pass
 
     _notify(f"⏰ [10:30 PM NIGHT-DESK AUTO ALARM] दिनांक {target_edition_date} के लिए देश-दुनिया व 4 राज्यों (CG, MP, DL, RJ) की ताज़ा ओरिजिनल खबरें कलेक्ट की जा रही हैं...")
+    if os.environ.get("GITHUB_ACTIONS") != "true":
+        try:
+            import ab_cloud_whatsapp_email_delivery_engine as deliv_eng
+            gh_disp = deliv_eng.trigger_github_actions_cloud_build_via_api(
+                edition_date=target_edition_date,
+                p1_dummy_id=p1_dummy_id or cfg.get("default_p1_dummy", "AUTO"),
+            )
+            print(f"[10:30 PM GitHub Cloud API Dispatch]: {gh_disp}")
+        except Exception as e:
+            print(f"[WARN] GitHub Cloud API dispatch warning: {e}")
+
     try:
         import ab_night_desk_1030pm_live_harvester as live_1030
         live_1030.harvest_all_8_pages_original_live_news_at_1030pm(target_edition_date)

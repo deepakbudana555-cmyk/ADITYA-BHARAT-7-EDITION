@@ -431,6 +431,50 @@ def send_editions_via_whatsapp_and_telegram(date_str: str, editions_list: list =
     }
 
 
+def trigger_github_actions_cloud_build_via_api(edition_date: str = "", p1_dummy_id: str = "AUTO") -> dict:
+    """
+    Directly triggers the GitHub Actions workflow (`daily_aditya_bharat_7editions_cloud.yml`)
+    via GitHub REST API `workflow_dispatch` using the local Git Credential Manager token so
+    the 10:30 PM run starts immediately without waiting for GitHub's cron queue!
+    """
+    try:
+        p = subprocess.Popen(
+            ["git", "credential", "fill"],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            cwd=str(VAULT_DIR),
+        )
+        out, _ = p.communicate("protocol=https\nhost=github.com\n\n", timeout=8)
+        tok = dict(l.split("=", 1) for l in out.splitlines() if "=" in l).get("password", "").strip()
+        if not tok:
+            return {"ok": False, "error": "No GitHub token in git credential manager"}
+        url = "https://api.github.com/repos/deepakbudana555-cmyk/ADITYA-BHARAT-7-EDITION/actions/workflows/daily_aditya_bharat_7editions_cloud.yml/dispatches"
+        payload = json.dumps({
+            "ref": "main",
+            "inputs": {
+                "edition_date": edition_date or "",
+                "p1_dummy_id": p1_dummy_id or "AUTO",
+            },
+        }).encode("utf-8")
+        req = urllib.request.Request(
+            url,
+            data=payload,
+            headers={
+                "User-Agent": "AdityaBharatStudio/2.0",
+                "Authorization": f"Bearer {tok}",
+                "Accept": "application/vnd.github+json",
+                "Content-Type": "application/json",
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            return {"ok": resp.status in (200, 204), "status": resp.status}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
 def deliver_all_7_editions_everywhere(date_str: str, source: str = "LOCAL_PC") -> dict:
     """
     Master Delivery Runner called after `build_all_7_editions_4_states_with_single_vector_pdfs`:

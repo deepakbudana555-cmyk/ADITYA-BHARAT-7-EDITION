@@ -2,8 +2,10 @@ name: "⏰ दैनिक आदित्य भारत — Daily 10:30 PM IS
 
 on:
   schedule:
-    # Runs AUTOMATICALLY EVERY NIGHT at 10:30 PM IST (22:30 IST = 17:00 UTC)
-    - cron: "0 17 * * *"
+    # Staggered off-peak cron triggers around 10:30 PM IST (16:57 UTC = 10:27 PM IST & 17:03 UTC = 10:33 PM IST)
+    # so GitHub's congested :00 minute cron queue never drops the nightly 10:30 PM run!
+    - cron: "57 16 * * *"
+    - cron: "3 17 * * *"
   workflow_dispatch:
     inputs:
       edition_date:
