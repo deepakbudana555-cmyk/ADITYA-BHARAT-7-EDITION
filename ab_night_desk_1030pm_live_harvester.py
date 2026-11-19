@@ -31,35 +31,73 @@ CACHE_DIR.mkdir(parents=True, exist_ok=True)
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AdityaBharatNightDesk/2.0"
 
 
-def _clean_live_hindi_headline(raw_title: str, max_words: int = 9) -> str:
+DANGLING_END_WORDS = {
+    "का", "की", "के", "को", "में", "से", "पर", "और", "व", "एवं", "तथा",
+    "ने", "तो", "कि", "जो", "भी", "ही", "तक", "लिए", "द्वारा", "साथ",
+    "वाले", "वाली", "वाला", "कर", "हो", "ना", "या", "एक", "दो", "तीन",
+    "चार", "पांच", "छह", "सात", "आठ", "नौ", "दस", "लाख", "करोड़", "रुपये",
+}
+
+BAD_START_WORDS = {"ने", "का", "की", "के", "को", "में", "से", "पर", "और", "व", "कि", "तो"}
+
+
+def _clean_live_hindi_headline(raw_title: str, max_words: int = 8) -> str:
     if not raw_title:
         return ""
-    # Strip trailing source suffix after ' - ' or ' | '
+    # Strip trailing publisher name after ' - ' or ' | '
     t = re.split(r"\s+[-|–—]\s+", raw_title.strip())[0].strip()
-    # Remove quotes, brackets, English words, and weird symbols
-    t = re.sub(r"[\"'“”‘’`\[\]\(\)<>]", " ", t)
-    t = re.sub(r"[A-Za-z]+", " ", t)
+    # Remove quotes, brackets, English letters, digits with colons/dots, and symbols
+    t = re.sub(r"[\"'“”‘’`\[\]\(\)<>•…?!]", " ", t)
+    t = re.sub(r"[A-Za-z0-9./:%+]+", " ", t)
     t = " ".join(t.split()).strip(" :;,-।")
-    # Ensure sufficient Devanagari content
-    dev_chars = len(re.findall(r"[\u0900-\u097F]", t))
-    if dev_chars < 14:
-        return ""
-    words = t.split()
-    if len(words) < 4:
-        return ""
+
+    # If there is a prefix before ':' (e.g. 'सीजी: ...' or 'बड़ी खबर: ...'), take the main clause
+    if ":" in t:
+        parts = [p.strip(" :;,-।") for p in t.split(":") if len(p.strip().split()) >= 4]
+        if parts:
+            # Prefer a clause that already fits 4..max_words words
+            fitting = [p for p in parts if 4 <= len(p.split()) <= max_words]
+            t = fitting[0] if fitting else max(parts, key=lambda x: len(x.split()))
+
+    # Also split on comma if the first clause is a complete 5..max_words phrase
+    if "," in t:
+        c_parts = [p.strip(" :;,-।") for p in t.split(",") if len(p.strip().split()) >= 5]
+        if c_parts and len(c_parts[0].split()) <= max_words:
+            t = c_parts[0]
+
+    t = t.replace(":", " ").replace(",", " ").replace(";", " ")
+    words = [w.strip(" :;,-।") for w in t.split() if w.strip(" :;,-।")]
+    while words and words[0] in BAD_START_WORDS:
+        words.pop(0)
     if len(words) > max_words:
-        t = " ".join(words[:max_words]).rstrip(" :;,-।")
-    return t
+        words = words[:max_words]
+    while words and words[-1] in DANGLING_END_WORDS:
+        words.pop()
+
+    if len(words) < 5:
+        return ""
+    final_h = " ".join(words)
+    if len(re.findall(r"[\u0900-\u097F]", final_h)) < 16:
+        return ""
+    return final_h
 
 
 def _clean_live_hindi_summary(raw_desc: str, fallback_head: str, state_or_beat_context: str) -> str:
     txt = re.sub(r"<[^>]+>", " ", raw_desc or "")
     txt = re.sub(r"&[a-zA-Z0-9#]+;", " ", txt)
-    txt = re.sub(r"[A-Za-z]{3,}", " ", txt)
-    txt = " ".join(txt.split()).strip()
+    # Strip trailing publisher names and ALL Latin/ASCII tokens (e.g. 'TV', 'DD', 'cm on', '.in')
+    txt = re.split(r"\s+[-|–—]\s+", txt)[0]
+    txt = re.sub(r"[A-Za-z0-9_.\-/:%+]+", " ", txt)
+    txt = re.sub(r"[\"'“”‘’`\[\]\(\)<>•…?!]", " ", txt)
+    txt = " ".join(txt.split()).strip(" :;,-।")
     dev_chars = len(re.findall(r"[\u0900-\u097F]", txt))
-    if dev_chars < 45:
-        txt = f"{fallback_head} के संदर्भ में प्रशासन और संबंधित विभाग ने आज महत्वपूर्ण निर्णय लेते हुए समयबद्ध क्रियान्वयन की प्रक्रिया तेज कर दी है।"
+    if dev_chars < 55 or len(txt.split()) < 10:
+        txt = f"{fallback_head} के संदर्भ में शासन और संबंधित विभाग ने महत्वपूर्ण निर्णय लेते हुए समयबद्ध क्रियान्वयन की प्रक्रिया तेज कर दी है।"
+    else:
+        words = txt.split()
+        while words and words[-1] in DANGLING_END_WORDS:
+            words.pop()
+        txt = " ".join(words) + " के तहत संबंधित विभाग द्वारा त्वरित कार्रवाई सुनिश्चित की जा रही है।"
     if not txt.endswith("।"):
         txt += "।"
     return f"{txt}\n{state_or_beat_context}"
