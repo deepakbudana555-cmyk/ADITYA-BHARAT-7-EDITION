@@ -36,50 +36,71 @@ DANGLING_END_WORDS = {
     "ने", "तो", "कि", "जो", "भी", "ही", "तक", "लिए", "द्वारा", "साथ",
     "वाले", "वाली", "वाला", "कर", "हो", "ना", "या", "एक", "दो", "तीन",
     "चार", "पांच", "छह", "सात", "आठ", "नौ", "दस", "लाख", "करोड़", "रुपये",
+    "अप्रैल", "मई", "जून", "जुलाई", "अगस्त", "सितंबर", "अक्टूबर", "नवंबर", "दिसंबर", "जनवरी", "फरवरी", "मार्च",
+    "आर्थिक", "सामाजिक", "राष्ट्रीय", "भारतीय", "प्रदेश", "राज्य", "केंद्र", "सरकार", "कैबिनेट",
 }
 
-BAD_START_WORDS = {"ने", "का", "की", "के", "को", "में", "से", "पर", "और", "व", "कि", "तो"}
+VALID_HEADLINE_END_WORDS = {
+    "मंजूरी", "फैसला", "घोषणा", "शुरू", "तैयार", "तेज", "राहत", "सौगात", "निर्णय", "निर्देश",
+    "उछाल", "रिकॉर्ड", "जीत", "सम्मान", "तैनात", "लागू", "सफल", "रवाना", "उद्घाटन", "लोकार्पण",
+    "चेतावनी", "कार्रवाई", "गिरफ्तार", "बरामद", "जांच", "बैठक", "समझौता", "बढ़ोतरी", "कटौती",
+    "अभियान", "योजना", "प्रारंभ", "संपन्न", "जारी", "मुफ्त", "अनिवार्य", "मिली", "मिला",
+    "मिलेगी", "मिलेगा", "होगी", "होगा", "होंगे", "किया", "किए", "दिया", "दी", "दिए",
+    "लिया", "ली", "बना", "बनी", "बनेगा", "बनेगी", "पहुंचा", "पहुंची", "बढ़ा", "बढ़ी", "घटा", "घटी",
+    "झंडी", "लक्ष्य", "प्राथमिकता", "विस्तार", "निवेश", "बदलाव", "सुधार", "तय", "पारित", "स्वीकृति",
+}
+
+BAD_START_WORDS = {"ने", "का", "की", "के", "को", "में", "से", "पर", "और", "व", "कि", "तो", "है", "हैं"}
+
+
+CLICKBAIT_REJECT_WORDS = {
+    "जानें", "जाने", "जानिए", "क्या", "क्या-क्या", "कहां", "कहाँ", "कैसे", "कब", "क्यों",
+    "देखें", "देखिए", "पढ़ें", "पढ़िए", "बताया", "बोले", "कहा", "किसने", "किसे", "कितना", "कितने",
+}
 
 
 def _clean_live_hindi_headline(raw_title: str, max_words: int = 8) -> str:
+    """
+    Strictly validates and extracts a 100% complete, untruncated Hindi headline clause from a live RSS title.
+    NEVER slices a clause in the middle (`words[:max_words]` is forbidden because Hindi is Subject-Object-Verb).
+    If no self-contained clause in `raw_title` fits within `6..max_words` words with a complete predicate ending
+    and >= 28 Devanagari characters, returns `""` so the slot preserves its complete newspaper headline while
+    updating the body with live news.
+    """
     if not raw_title:
         return ""
     # Strip trailing publisher name after ' - ' or ' | '
     t = re.split(r"\s+[-|–—]\s+", raw_title.strip())[0].strip()
-    # Remove quotes, brackets, English letters, digits with colons/dots, and symbols
+    # Reject titles that contain ANY English/Latin letters so stripping never leaves broken holes
+    if re.search(r"[A-Za-z]", t):
+        return ""
     t = re.sub(r"[\"'“”‘’`\[\]\(\)<>•…?!]", " ", t)
-    t = re.sub(r"[A-Za-z0-9./:%+]+", " ", t)
     t = " ".join(t.split()).strip(" :;,-।")
 
-    # If there is a prefix before ':' (e.g. 'सीजी: ...' or 'बड़ी खबर: ...'), take the main clause
-    if ":" in t:
-        parts = [p.strip(" :;,-।") for p in t.split(":") if len(p.strip().split()) >= 4]
-        if parts:
-            # Prefer a clause that already fits 4..max_words words
-            fitting = [p for p in parts if 4 <= len(p.split()) <= max_words]
-            t = fitting[0] if fitting else max(parts, key=lambda x: len(x.split()))
+    # Split into natural clauses on ':', ';', '।', ',' — NEVER slice inside a clause!
+    raw_clauses = [c.strip(" :;,-।") for c in re.split(r"[:;।,]", t) if c.strip(" :;,-।")]
+    if not raw_clauses:
+        raw_clauses = [t]
 
-    # Also split on comma if the first clause is a complete 5..max_words phrase
-    if "," in t:
-        c_parts = [p.strip(" :;,-।") for p in t.split(",") if len(p.strip().split()) >= 5]
-        if c_parts and len(c_parts[0].split()) <= max_words:
-            t = c_parts[0]
+    for clause in raw_clauses:
+        words = [w.strip(" :;,-।") for w in clause.split() if w.strip(" :;,-।")]
+        while words and words[0] in BAD_START_WORDS:
+            words.pop(0)
+        # Must naturally fit 6..max_words without ANY mid-clause truncation
+        if not (6 <= len(words) <= max_words):
+            continue
+        if any(w in CLICKBAIT_REJECT_WORDS for w in words):
+            continue
+        last_w = words[-1].rstrip("।")
+        if last_w in DANGLING_END_WORDS:
+            continue
+        if last_w not in VALID_HEADLINE_END_WORDS:
+            continue
+        final_h = " ".join(words)
+        if len(re.findall(r"[\u0900-\u097F]", final_h)) >= 28:
+            return final_h
 
-    t = t.replace(":", " ").replace(",", " ").replace(";", " ")
-    words = [w.strip(" :;,-।") for w in t.split() if w.strip(" :;,-।")]
-    while words and words[0] in BAD_START_WORDS:
-        words.pop(0)
-    if len(words) > max_words:
-        words = words[:max_words]
-    while words and words[-1] in DANGLING_END_WORDS:
-        words.pop()
-
-    if len(words) < 5:
-        return ""
-    final_h = " ".join(words)
-    if len(re.findall(r"[\u0900-\u097F]", final_h)) < 16:
-        return ""
-    return final_h
+    return ""
 
 
 def _clean_live_hindi_summary(raw_desc: str, fallback_head: str, state_or_beat_context: str) -> str:

@@ -596,36 +596,33 @@ CG_CITIES_DETECT = [
 
 def fit_headline_to_slot_char_budget(raw_head: str, role: str) -> str:
     """
-    Deterministic Hindi Sub-Editor that trims or expands a live RSS/Wire headline
-    to fit the exact character budget of its target column span (2-Col..6-Col) so
-    every headline covers 100% of its column width with zero empty space and zero 3rd-line wrap.
+    Deterministic Hindi Sub-Editor that validates a live RSS/Wire headline
+    to fit the exact character budget of its target column span (2-Col..6-Col)
+    WITHOUT ever slicing a Hindi sentence in the middle.
+    If no complete clause fits within lo_c..hi_c, returns '' so the slot keeps its complete headline.
     """
-    clean = re.sub(r"\s+", " ", (raw_head or "").replace(":", " : ").replace("—", " ").replace("-", " ")).strip()
-    # Remove source suffixes or English tokens
-    if " - " in clean:
-        clean = clean.rsplit(" - ", 1)[0].strip()
-    clean = re.sub(r"[A-Za-z0-9_@#/]+", "", clean)
-    clean = re.sub(r"\s+", " ", clean).strip(" ,.|:-")
+    if not raw_head:
+        return ""
+    clean = re.split(r"\s+[-|–—]\s+", raw_head.strip())[0].strip()
+    if re.search(r"[A-Za-z]{2,}", clean):
+        return ""
     lo_c, hi_c = SLOT_CHAR_BUDGETS.get(role, (42, 54))
-    words = clean.split(" ")
-    if len(clean) > hi_c:
-        acc = []
-        for w in words:
-            cand = " ".join(acc + [w])
-            if len(cand) <= hi_c:
-                acc.append(w)
-            else:
-                break
-        if len(acc) >= 4:
-            clean = " ".join(acc)
-    pad_phrases = ["का व्यापक विस्तार", "को मिली हरी झंडी", "पर तेजी से अमल", "से आमजन को राहत", "की नई कार्ययोजना लागू"]
-    for pf in pad_phrases:
-        if len(clean) < lo_c and pf not in clean:
-            cand = f"{clean} {pf}".strip()
-            if len(cand) <= hi_c + 2:
-                clean = cand
-                break
-    return clean
+    valid_endings = {
+        "मंजूरी", "फैसला", "घोषणा", "शुरू", "तैयार", "तेज", "राहत", "सौगात", "निर्णय", "निर्देश",
+        "उछाल", "रिकॉर्ड", "जीत", "सम्मान", "तैनात", "लागू", "सफल", "रवाना", "उद्घाटन", "लोकार्पण",
+        "चेतावनी", "कार्रवाई", "गिरफ्तार", "बरामद", "जांच", "बैठक", "समझौता", "बढ़ोतरी", "कटौती",
+        "अभियान", "योजना", "प्रारंभ", "संपन्न", "जारी", "मुफ्त", "अनिवार्य", "मिली", "मिला",
+        "मिलेगी", "मिलेगा", "होगी", "होगा", "होंगे", "किया", "किए", "दिया", "दी", "दिए",
+        "लिया", "ली", "बना", "बनी", "बनेगा", "बनेगी", "पहुंचा", "पहुंची", "बढ़ा", "बढ़ी", "झंडी",
+    }
+    clauses = [c.strip(" :;,-।\"'“”‘’") for c in re.split(r"[:;।,]", clean) if c.strip(" :;,-।\"'“”‘’")]
+    for cl in clauses:
+        cl_norm = " ".join(cl.split())
+        words = cl_norm.split()
+        if len(words) >= 5 and lo_c - 6 <= len(cl_norm) <= hi_c:
+            if words[-1].rstrip("।") in valid_endings:
+                return cl_norm
+    return ""
 
 
 def harvest_chhattisgarh_news_for_date(date_str: str = "18-11-2026", force_fresh_live: bool = False) -> dict:
