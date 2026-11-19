@@ -38,14 +38,293 @@
       "overprint_black": true,
       "strict_single_plate_k": true
     },
-    "custom_colored_text_allowed": true
+    "custom_colored_text_allowed": true,
+    "bottom_cmyk_press_color_marka": {
+      "enabled": true,
+      "pages": [1, 2, 3, 4, 5, 6, 7, 8],
+      "bottom_closing_gray_rule": {
+        "y_cm": 52.26,
+        "x_range_cm": [1.0, 33.0],
+        "weight_pt": 2.0,
+        "color": "[Black]",
+        "tint": 0.60,
+        "z_order": "behind_cmyk_boxes"
+      },
+      "y_range_cm": [52.10, 52.42],
+      "three_groups_centers_x_cm": [3.5, 17.0, 30.5],
+      "box_width_mm": 4.0,
+      "box_height_mm": 3.2,
+      "patches": [
+        {"label": "C", "swatch": "PressCyan", "hex": "#00aeef", "tint": 1.0},
+        {"label": "M", "swatch": "PressMagenta", "hex": "#ec008c", "tint": 1.0},
+        {"label": "Y", "swatch": "PressYellow", "hex": "#fff200", "tint": 1.0},
+        {"label": "K", "swatch": "[Black]", "hex": "#000000", "tint": 1.0}
+      ]
+    },
+    "raipur_edition_print_line": {
+      "edition_code": "RAIPUR",
+      "edition_city_hi": "रायपुर",
+      "page": 8,
+      "top_separator_black_rule": {
+        "y_cm": 50.90,
+        "x_range_cm": [1.0, 33.0],
+        "weight_pt": 0.5,
+        "color": "[Black]"
+      },
+      "print_line_space_y_cm": [50.98, 51.98],
+      "height_cm": 1.0,
+      "line_1_bold_prefix": "स्वामी/प्रकाशक -",
+      "line_1": "स्वामी/प्रकाशक - दीपक बुड़ाना द्वारा मिशन मीडिया प्रायवेट लिमिटेड, प्रेस कॉम्प्लेक्स , रजबंधा मैदान रायपुर (छ.ग) से मुद्रित एवं शौर्या आर्केड, समवेत शिखर कॉम्प्लेक्स, रजबंधा मैदान रायपुर, जिला-रायपुर (छत्तीसगढ़) से प्रकाशित।",
+      "line_2_bold_prefix": "संपादक - दीपक बुड़ाना,",
+      "line_2": "संपादक - दीपक बुड़ाना, समाचार चयन के लिए पीआरबी एक्ट के तहत जिम्मेदार। RNI NO. CHHHIN/2018/76773 (सभी विवादों का न्यायलय क्षेत्र रायपुर रहेगा)"
+    },
+    "new_delhi_edition_print_line": {
+      "edition_code": "NEW_DELHI",
+      "edition_city_hi": "नई दिल्ली",
+      "page": 8,
+      "top_separator_black_rule": {
+        "y_cm": 50.90,
+        "x_range_cm": [1.0, 33.0],
+        "weight_pt": 0.5,
+        "color": "[Black]"
+      },
+      "print_line_space_y_cm": [50.98, 51.98],
+      "height_cm": 1.0,
+      "line_1_bold_prefix": "स्वामी/प्रकाशक -",
+      "line_1": "स्वामी/प्रकाशक - दीपक बुड़ाना द्वारा सजग मीडिया प्रायवेट लिमिटेड, सेक्टर 80, रजबंधा गौतम बुद्ध नगर उत्तर प्रदेश से मुद्रित एवं प्लॉट नंबर 4 फर्स्ट फ्लोर, साउथ गनेश नगर मदर डेयरी रोड नई दिल्ली से प्रकाशित।",
+      "line_2_bold_prefix": "संपादक - दीपक बुड़ाना,",
+      "line_2": "संपादक - दीपक बुड़ाना, PRGI No. DLHIN/25/A3662 (सभी विवादों का न्यायलय क्षेत्र नई दिल्ली रहेगा) *समाचार चयन के लिए जिम्मेदार।"
+    },
+    "bilaspur_edition_print_line": {
+      "edition_code": "BILASPUR",
+      "edition_city_hi": "बिलासपुर",
+      "page": 8,
+      "top_separator_black_rule": {
+        "y_cm": 50.90,
+        "x_range_cm": [1.0, 33.0],
+        "weight_pt": 0.5,
+        "color": "[Black]"
+      },
+      "print_line_space_y_cm": [50.98, 51.98],
+      "height_cm": 1.0,
+      "line_1_bold_prefix": "स्वामी/प्रकाशक -",
+      "line_1": "स्वामी/प्रकाशक - दीपक बुड़ाना द्वारा मिशन मीडिया प्रायवेट लिमिटेड, प्रेस कॉम्प्लेक्स , रजबंधा मैदान रायपुर (छ.ग) से मुद्रित एवं हाउस नं107 इंदिरा कांग्रेस भवन, बिलासपुर (छत्तीसगढ़) से प्रकाशित।",
+      "line_2_bold_prefix": "संपादक - दीपक बुड़ाना,",
+      "line_2": "संपादक - दीपक बुड़ाना, PRGI No. CTHIN/25/A1423 (सभी विवादों का न्यायलय क्षेत्र रायपुर रहेगा) *समाचार चयन के लिए जिम्मेदार।"
+    },
+    "bhopal_edition_print_line": {
+      "edition_code": "BHOPAL",
+      "edition_city_hi": "भोपाल",
+      "page": 8,
+      "top_separator_black_rule": {
+        "y_cm": 50.90,
+        "x_range_cm": [1.0, 33.0],
+        "weight_pt": 0.5,
+        "color": "[Black]"
+      },
+      "print_line_space_y_cm": [50.98, 51.98],
+      "height_cm": 1.0,
+      "line_1_bold_prefix": "स्वामी/मुद्रित/प्रकाशक -",
+      "line_1": "स्वामी/मुद्रित/प्रकाशक - दीपक बुड़ाना द्वारा प्रकाश प्रिंटर्स, 03, प्रेस काम्प्लेक्स, एम.पी. नगर, भोपाल (मध्यप्रदेश) से मुद्रित एवं 230, ओल्ड अशोका गार्डन, भारत गैस एजेंसी के सामने, भोपाल से प्रकाशित।",
+      "line_2_bold_prefix": "संपादक - दीपक बुड़ाना,",
+      "line_2": "संपादक - दीपक बुड़ाना, आर.एन.आई. नबंर - MPHIN/2015/63660 (सभी विवादों का न्यायलय क्षेत्र भोपाल रहेगा)*समाचार चयन के लिए जिम्मेदार।"
+    },
+    "indore_edition_print_line": {
+      "edition_code": "INDORE",
+      "edition_city_hi": "इंदौर",
+      "page": 8,
+      "top_separator_black_rule": {
+        "y_cm": 50.90,
+        "x_range_cm": [1.0, 33.0],
+        "weight_pt": 0.5,
+        "color": "[Black]"
+      },
+      "print_line_space_y_cm": [50.98, 51.98],
+      "height_cm": 1.0,
+      "line_1_bold_prefix": "स्वामी/मुद्रित/प्रकाशक -",
+      "line_1": "स्वामी/मुद्रित/प्रकाशक - दीपक बुड़ाना द्वारा चैतन्य लोक ग्राफिक्स, एलयूएन-22, सेक्टर-एफ इंडस्ट्रियल एरिया, सांवेर रोड इंदौर (मध्यप्रदेश) से मुद्रित एवं 66 बी शुभम पैलेस, छोटा बांगड़दा रोड इंदौर से प्रकाशित।",
+      "line_2_bold_prefix": "संपादक- दीपक बुड़ाना,",
+      "line_2": "संपादक- दीपक बुड़ाना, आर.एन.आई. नबंर - MPHIN/2014/56594 (सभी विवादों का न्यायलय क्षेत्र इंदौर रहेगा)*समाचार चयन के लिए जिम्मेदार।"
+    },
+    "rajnandgaon_edition_print_line": {
+      "edition_code": "RAJNANDGAON",
+      "edition_city_hi": "राजनांदगांव",
+      "page": 8,
+      "top_separator_black_rule": {
+        "y_cm": 50.90,
+        "x_range_cm": [1.0, 33.0],
+        "weight_pt": 0.5,
+        "color": "[Black]"
+      },
+      "print_line_space_y_cm": [50.98, 51.98],
+      "height_cm": 1.0,
+      "line_1_bold_prefix": "स्वामी/प्रकाशक -",
+      "line_1": "स्वामी/प्रकाशक - दीपक बुड़ाना द्वारा मिशन मीडिया प्रायवेट लिमिटेड, प्रेस कॉम्प्लेक्स , रजबंधा मैदान रायपुर (छ.ग) से मुद्रित एवं न्यू खंडेलवाल कॉलोनी आंगन बाड़ी के सामने, राजनांदगांव (छत्तीसगढ़) से प्रकाशित।",
+      "line_2_bold_prefix": "संपादक - दीपक बुड़ाना,",
+      "line_2": "संपादक - दीपक बुड़ाना, PRGI No. CTHIN/25/A4799 (सभी विवादों का न्यायलय क्षेत्र रायपुर रहेगा) *समाचार चयन के लिए जिम्मेदार।"
+    },
+    "jaipur_edition_print_line": {
+      "edition_code": "JAIPUR",
+      "edition_city_hi": "जयपुर",
+      "page": 8,
+      "top_separator_black_rule": {
+        "y_cm": 50.90,
+        "x_range_cm": [1.0, 33.0],
+        "weight_pt": 0.5,
+        "color": "[Black]"
+      },
+      "print_line_space_y_cm": [50.98, 51.98],
+      "height_cm": 1.0,
+      "line_1_bold_prefix": "स्वामी/मुद्रक/प्रकाशक - दीपक बुडाना",
+      "line_1": "स्वामी/मुद्रक/प्रकाशक - दीपक बुडाना द्वारा प्लॉट नंबर 17, माँ वैष्णो देवी नगर, कालवाड़ रोड, जयपुर (राजस्थान) - 302012 से मुद्रित एवं ई-775, नकुल पथ, लाल कोठी स्कीम, जयपुर (राजस्थान) - 302015 से प्रकाशित।",
+      "line_2_bold_prefix": "संपादक - दीपक बुडाना, पीआरजीआई पंजीकरण क्रमांक - RJHIN/26/A6072",
+      "line_2": "संपादक - दीपक बुडाना, पीआरजीआई पंजीकरण क्रमांक - RJHIN/26/A6072 (सभी विवादों का न्यायालय क्षेत्र जयपुर रहेगा)। *समाचार चयन के लिए जिम्मेदार।"
+    },
+    "editions_registry": {
+      "RAIPUR": {
+        "edition_code": "RAIPUR",
+        "city_hi": "रायपुर",
+        "page1_masthead_base": "photos/raipur_page1_masthead_base_no_ear.png",
+        "page1_masthead_original_ref": "photos/raipur_page1_masthead_original_19nov.png",
+        "rni_or_prgi_line": "RNI NO. - CHHHIN/2018/76773",
+        "base_reference_date": "19-11-2026",
+        "base_varsh": 10,
+        "zero_pad_varsh": false,
+        "base_ank": 130,
+        "issues_per_year": 365,
+        "price_text": "मूल्य - 3 रुपए ।",
+        "pages_and_edition_line": "पृष्ठ-08 । नगर संस्करण",
+        "page8_print_line_1": "स्वामी/प्रकाशक - दीपक बुड़ाना द्वारा मिशन मीडिया प्रायवेट लिमिटेड, प्रेस कॉम्प्लेक्स , रजबंधा मैदान रायपुर (छ.ग) से मुद्रित एवं शौर्या आर्केड, समवेत शिखर कॉम्प्लेक्स, रजबंधा मैदान रायपुर, जिला-रायपुर (छत्तीसगढ़) से प्रकाशित।",
+        "page8_print_line_2": "संपादक - दीपक बुड़ाना, समाचार चयन के लिए पीआरबी एक्ट के तहत जिम्मेदार। RNI NO. CHHHIN/2018/76773 (सभी विवादों का न्यायलय क्षेत्र रायपुर रहेगा)"
+      },
+      "NEW_DELHI": {
+        "edition_code": "NEW_DELHI",
+        "city_hi": "नई दिल्ली",
+        "page1_masthead_base": "photos/new_delhi_page1_masthead_base_no_ear.png",
+        "page1_masthead_original_ref": "photos/new_delhi_page1_masthead_original_19nov.png",
+        "rni_or_prgi_line": "PRGI - DLHIN/25/A3662",
+        "base_reference_date": "19-11-2026",
+        "base_varsh": 2,
+        "zero_pad_varsh": true,
+        "base_ank": 13,
+        "issues_per_year": 365,
+        "price_text": "मूल्य - 2 रुपए।",
+        "pages_and_edition_line": "पृष्ठ-08। नगर संस्करण",
+        "page8_print_line_1": "स्वामी/प्रकाशक - दीपक बुड़ाना द्वारा सजग मीडिया प्रायवेट लिमिटेड, सेक्टर 80, रजबंधा गौतम बुद्ध नगर उत्तर प्रदेश से मुद्रित एवं प्लॉट नंबर 4 फर्स्ट फ्लोर, साउथ गनेश नगर मदर डेयरी रोड नई दिल्ली से प्रकाशित।",
+        "page8_print_line_2": "संपादक - दीपक बुड़ाना, PRGI No. DLHIN/25/A3662 (सभी विवादों का न्यायलय क्षेत्र नई दिल्ली रहेगा) *समाचार चयन के लिए जिम्मेदार।"
+      },
+      "BILASPUR": {
+        "edition_code": "BILASPUR",
+        "city_hi": "बिलासपुर",
+        "page1_masthead_base": "photos/bilaspur_page1_masthead_base_no_ear.png",
+        "page1_masthead_original_ref": "photos/bilaspur_page1_masthead_original_19nov.png",
+        "rni_or_prgi_line": "PRGI No. - CTHIN/25/A1423",
+        "base_reference_date": "19-11-2026",
+        "base_varsh": 3,
+        "zero_pad_varsh": true,
+        "base_ank": 329,
+        "issues_per_year": 365,
+        "price_text": "मूल्य - 2 रुपए।",
+        "pages_and_edition_line": "पृष्ठ-08 । नगर संस्करण",
+        "page8_print_line_1": "स्वामी/प्रकाशक - दीपक बुड़ाना द्वारा मिशन मीडिया प्रायवेट लिमिटेड, प्रेस कॉम्प्लेक्स , रजबंधा मैदान रायपुर (छ.ग) से मुद्रित एवं हाउस नं107 इंदिरा कांग्रेस भवन, बिलासपुर (छत्तीसगढ़) से प्रकाशित।",
+        "page8_print_line_2": "संपादक - दीपक बुड़ाना, PRGI No. CTHIN/25/A1423 (सभी विवादों का न्यायलय क्षेत्र रायपुर रहेगा) *समाचार चयन के लिए जिम्मेदार।"
+      },
+      "BHOPAL": {
+        "edition_code": "BHOPAL",
+        "city_hi": "भोपाल",
+        "page1_masthead_base": "photos/bhopal_page1_masthead_base_no_ear.png",
+        "page1_masthead_original_ref": "photos/bhopal_page1_masthead_original_19nov.png",
+        "rni_or_prgi_line": "RNI NO. - MPHIN/2015/63660",
+        "base_reference_date": "19-11-2026",
+        "base_varsh": 10,
+        "zero_pad_varsh": false,
+        "base_ank": 222,
+        "issues_per_year": 365,
+        "price_text": "मूल्य - 2 रुपए।",
+        "pages_and_edition_line": "पृष्ठ-08 । नगर संस्करण",
+        "page8_print_line_1": "स्वामी/मुद्रित/प्रकाशक - दीपक बुड़ाना द्वारा प्रकाश प्रिंटर्स, 03, प्रेस काम्प्लेक्स, एम.पी. नगर, भोपाल (मध्यप्रदेश) से मुद्रित एवं 230, ओल्ड अशोका गार्डन, भारत गैस एजेंसी के सामने, भोपाल से प्रकाशित।",
+        "page8_print_line_2": "संपादक - दीपक बुड़ाना, आर.एन.आई. नबंर - MPHIN/2015/63660 (सभी विवादों का न्यायलय क्षेत्र भोपाल रहेगा)*समाचार चयन के लिए जिम्मेदार।"
+      },
+      "JAIPUR": {
+        "edition_code": "JAIPUR",
+        "city_hi": "जयपुर",
+        "page1_masthead_base": "photos/jaipur_page1_masthead_base_no_ear.png",
+        "page1_masthead_original_ref": "photos/jaipur_page1_masthead_original_19nov.png",
+        "rni_or_prgi_line": "RJHIN/26/A6072",
+        "base_reference_date": "19-11-2026",
+        "base_varsh": 1,
+        "zero_pad_varsh": true,
+        "base_ank": 98,
+        "issues_per_year": 365,
+        "price_text": "मूल्य - 2 रुपए।",
+        "pages_and_edition_line": "पृष्ठ-08 । नगर संस्करण",
+        "page8_print_line_1": "स्वामी/मुद्रक/प्रकाशक - दीपक बुडाना द्वारा प्लॉट नंबर 17, माँ वैष्णो देवी नगर, कालवाड़ रोड, जयपुर (राजस्थान) - 302012 से मुद्रित एवं ई-775, नकुल पथ, लाल कोठी स्कीम, जयपुर (राजस्थान) - 302015 से प्रकाशित।",
+        "page8_print_line_2": "संपादक - दीपक बुडाना, पीआरजीआई पंजीकरण क्रमांक - RJHIN/26/A6072 (सभी विवादों का न्यायालय क्षेत्र जयपुर रहेगा)। *समाचार चयन के लिए जिम्मेदार।"
+      },
+      "INDORE": {
+        "edition_code": "INDORE",
+        "city_hi": "इंदौर",
+        "page1_masthead_base": "photos/indore_page1_masthead_base_no_ear.png",
+        "page1_masthead_original_ref": "photos/indore_page1_masthead_original_19nov.png",
+        "rni_or_prgi_line": "RNI NO. - MPHIN/2014/56594",
+        "base_reference_date": "19-11-2026",
+        "base_varsh": 12,
+        "zero_pad_varsh": false,
+        "base_ank": 315,
+        "issues_per_year": 365,
+        "price_text": "मूल्य - 2 रुपए ।",
+        "pages_and_edition_line": "पृष्ठ-08 । नगर संस्करण",
+        "page8_print_line_1": "स्वामी/मुद्रित/प्रकाशक - दीपक बुड़ाना द्वारा चैतन्य लोक ग्राफिक्स, एलयूएन-22, सेक्टर-एफ इंडस्ट्रियल एरिया, सांवेर रोड इंदौर (मध्यप्रदेश) से मुद्रित एवं 66 बी शुभम पैलेस, छोटा बांगड़दा रोड इंदौर से प्रकाशित।",
+        "page8_print_line_2": "संपादक- दीपक बुड़ाना, आर.एन.आई. नबंर - MPHIN/2014/56594 (सभी विवादों का न्यायलय क्षेत्र इंदौर रहेगा)*समाचार चयन के लिए जिम्मेदार।"
+      },
+      "RAJNANDGAON": {
+        "edition_code": "RAJNANDGAON",
+        "city_hi": "राजनांदगांव",
+        "page1_masthead_base": "photos/rajnandgaon_page1_masthead_base_no_ear.png",
+        "page1_masthead_original_ref": "photos/rajnandgaon_page1_masthead_original_19nov.png",
+        "rni_or_prgi_line": "PRGI - CTHIN/25/A4799",
+        "base_reference_date": "19-11-2026",
+        "base_varsh": 4,
+        "zero_pad_varsh": true,
+        "base_ank": 341,
+        "issues_per_year": 365,
+        "price_text": "मूल्य - 2 रुपए।",
+        "pages_and_edition_line": "पृष्ठ-08 । नगर संस्करण",
+        "page8_print_line_1": "स्वामी/प्रकाशक - दीपक बुड़ाना द्वारा मिशन मीडिया प्रायवेट लिमिटेड, प्रेस कॉम्प्लेक्स , रजबंधा मैदान रायपुर (छ.ग) से मुद्रित एवं न्यू खंडेलवाल कॉलोनी आंगन बाड़ी के सामने, राजनांदगांव (छत्तीसगढ़) से प्रकाशित।",
+        "page8_print_line_2": "संपादक - दीपक बुड़ाना, PRGI No. CTHIN/25/A4799 (सभी विवादों का न्यायलय क्षेत्र रायपुर रहेगा) *समाचार चयन के लिए जिम्मेदार।"
+      }
+    }
   },
   "mastheads": {
     "front_page_masthead": {
       "page": 1,
+      "edition_code": "RPR",
+      "edition_city_hi": "रायपुर",
       "height_cm": 6.0,
       "y_range_cm": [1.0, 7.0],
-      "status": "reserved_space_ready"
+      "status": "locked_raipur_dynamic_masthead",
+      "base_artwork_file": "photos/raipur_page1_masthead_base_no_ear.png",
+      "original_reference_file": "photos/raipur_page1_masthead_original_19nov.png",
+      "left_panel_editions_text": "तीन राज्य : छह संस्करण — नई दिल्ली, रायपुर, बिलासपुर, राजनांदगांव, जयपुर, इंदौर व भोपाल से एकसाथ प्रकाशित",
+      "center_mantra": "!! श्रीकृष्ण शरणंमम !!",
+      "center_tagline": "सदैव सत्य के साथ...",
+      "right_ear_panel_dynamic_rules": {
+        "x_range_cm": [28.35, 33.0],
+        "y_range_cm": [1.45, 6.22],
+        "rni_line": "RNI NO. - CHHHIN/2018/76773",
+        "base_reference_date": "19-11-2026",
+        "base_varsh": 10,
+        "base_ank": 130,
+        "issues_per_year": 365,
+        "price_text": "मूल्य - 3 रुपए ।",
+        "pages_and_edition_line": "पृष्ठ-08 । नगर संस्करण",
+        "city_display_hi": "रायपुर",
+        "dynamic_fields": [
+          "varsh_and_ank_line (वर्ष-{varsh} । अंक {ank} । मूल्य - 3 रुपए । — अंक रोज़ +1 बढ़ेगा, 365 अंक पूरे होने पर वर्ष +1 बढ़ेगा)",
+          "english_weekday_multicolor (SUNDAY..SATURDAY)",
+          "hindi_dateline (<हिंदी वार>, <दिन> <हिंदी महीना>, <वर्ष>)"
+        ]
+      }
     },
     "inside_pages_masthead": {
       "pages": [2, 3, 4, 5, 6, 7, 8],
@@ -167,7 +446,8 @@
     "किसी भी स्टोरी की हेडलाइन 30.0 pt (DB Rasrand Bold, 100% Black) से कम नहीं होगी; लाल हेडलाइन वर्जित।",
     "पूरे अखबार (Page 01 से Page 08) में कहीं भी खड़ी रूल (Vertical Divider Rule) नहीं लगेगी।",
     "लीड स्टोरी में फुल-हाइट 40% Gray बॉक्स हमेशा लीड के आखिरी कॉलम (Col 5 या Col 6/8) में लगेगा, कभी भी Col 1 से पहले नहीं।",
-    "सभी फोटो कॉम्पैक्ट और संतुलित साइज में रहेंगे तथा नीचे साफ बॉडी अंडरफ्लो (Underflow Lines) और कसा हुआ बॉटम एंकर रहेगा।"
+    "सभी फोटो कॉम्पैक्ट और संतुलित साइज में रहेंगे तथा नीचे साफ बॉडी अंडरफ्लो (Underflow Lines) और कसा हुआ बॉटम एंकर रहेगा।",
+    "सभी 8 पेजों (Page 01 से Page 08) के निचले मार्जिन (y = 52.22 .. 52.57 cm) में स्थायी रूप से CMYK प्रेस कलर मार्का (C, M, Y, K, R, G, B + 80%, 60%, 40%, 20% K छोटे बॉक्स) और रजिस्ट्रेशन क्रॉसहेयर मार्क (⊕) लगेंगे।"
   ],
   "pages": {
     "page_01": {

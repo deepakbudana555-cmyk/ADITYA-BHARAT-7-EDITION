@@ -25,14 +25,14 @@ CM_TO_PT = 72.0 / 2.54
 MM_TO_PT = CM_TO_PT / 10.0
 
 EIGHT_PAGE_SEQUENCE = [
-    ("page_01", "पेज 01 — फ्रंट पेज", "build_aditya_bharat_page1.py", "Aditya_Bharat_Page_01_34x53.pagedesigner"),
-    ("page_02", "पेज 02 — महानगर", "build_aditya_bharat_page2.py", "Aditya_Bharat_Page_02_Mahanagar_34x53.pagedesigner"),
-    ("page_03", "पेज 03 — प्रादेशिक", "build_aditya_bharat_page3.py", "Aditya_Bharat_Page_03_Pradeshik_34x53.pagedesigner"),
+    ("page_01", "पेज 01 — फ्रंट पेज (11 खबरें)", "ab_front_page1_4dummies_engine.py", "Aditya_Bharat_Page_01_34x53.pagedesigner"),
+    ("page_02", "पेज 02 — छत्तीसगढ़ राजधानी (10 खबरें)", "build_aditya_bharat_page2.py", "Aditya_Bharat_Page_02_Mahanagar_34x53.pagedesigner"),
+    ("page_03", "पेज 03 — छत्तीसगढ़ प्रादेशिक (10 खबरें)", "build_aditya_bharat_page3.py", "Aditya_Bharat_Page_03_Pradeshik_34x53.pagedesigner"),
     ("page_04", "पेज 04 — संपादकीय", "build_aditya_bharat_page5_edit.py", "Aditya_Bharat_Page_04_Sampadakiya_34x53.pagedesigner"),
-    ("page_05", "पेज 05 — राष्ट्रीय", "build_aditya_bharat_page4.py", "Aditya_Bharat_Page_05_Rashtriya_34x53.pagedesigner"),
-    ("page_06", "पेज 06 — कारोबार", "build_aditya_bharat_page6_business.py", "Aditya_Bharat_Page_06_Karobar_34x53.pagedesigner"),
-    ("page_07", "पेज 07 — खेल संसार", "build_aditya_bharat_page7_sports.py", "Aditya_Bharat_Page_07_Khel_Sansar_34x53.pagedesigner"),
-    ("page_08", "पेज 08 — देश-विदेश", "build_aditya_bharat_page8_desh_videsh.py", "Aditya_Bharat_Page_08_Desh_Videsh_34x53.pagedesigner"),
+    ("page_05", "पेज 05 — प्रादेशिक (MP+CG+RJ+DL • 12 खबरें)", "ab_pradeshik_page5_12news_engine.py", "Aditya_Bharat_Page_05_Pradeshik_34x53.pagedesigner"),
+    ("page_06", "पेज 06 — कारोबार (9 खबरें + बाजार मीटर)", "build_aditya_bharat_page6_business.py", "Aditya_Bharat_Page_06_Karobar_34x53.pagedesigner"),
+    ("page_07", "पेज 07 — खेल संसार + सिने संसार (11 खबरें + 5 Cutouts)", "ab_khel_film_page7_engine.py", "Aditya_Bharat_Page_07_Khel_Sansar_34x53.pagedesigner"),
+    ("page_08", "पेज 08 — देश-विदेश (70% राष्ट्रीय + 30% विदेशी + Print Line)", "ab_desh_videsh_page8_engine.py", "Aditya_Bharat_Page_08_Desh_Videsh_34x53.pagedesigner"),
 ]
 
 
@@ -281,6 +281,95 @@ def open_all_8_tabs_in_page_designer(close_existing: bool = True):
     return opened
 
 
+def build_and_open_8page_dummy_in_page_designer():
+    """Builds the 8-Page Structural Wireframe Dummy (Pages 1 to 8) inside Page Designer AND opens the 8-Page Full Edition beside it!"""
+    import aditya_bharat_studio_app_2424 as studio
+
+    def cm(v):
+        return round(v * CM_TO_PT, 2)
+
+    def mm(v):
+        return round(v * MM_TO_PT, 2)
+
+    s, f_in, _ = ensure_pd_connection()
+    for _ in range(12):
+        try:
+            r = send_rpc(s, f_in, "engine.execute", {"command": "file.close", "params": {"save": False}})
+            if not r.get("ok"):
+                break
+        except Exception:
+            break
+
+    w_pt = cm(34.0)
+    h_pt = cm(53.0)
+    m_pt = cm(1.0)
+    g_pt = mm(4.0)
+    col_w_pt = round((cm(32.0) - 7 * g_pt) / 8.0, 2)
+
+    send_rpc(s, f_in, "engine.batch", {"commands": [
+        {"command": "file.new", "params": {
+            "width": w_pt, "height": h_pt, "pages": 8, "facingPages": False,
+            "columns": 8, "gutter": g_pt, "margins": m_pt,
+            "title": "आदित्य भारत — 8-Page Structural Dummy Blueprint (Pages 01 to 08)",
+        }},
+        {"command": "swatch.create", "params": {"name": "FlyerCrimson", "color": "#c4121a"}},
+        {"command": "swatch.create", "params": {"name": "DummyFill", "color": "#ffffff"}},
+        {"command": "swatch.create", "params": {"name": "DummyGray", "color": "#e2e8f0"}},
+        {"command": "swatch.create", "params": {"name": "DummyStroke", "color": "#334155"}},
+        {"command": "window.panel", "params": {"panel": "pages"}},
+    ]})
+
+    main_8_pages = [p for p in studio.PAGE_Catalog if p["id"] != "page_01_opt2"]
+
+    for spread_idx, p in enumerate(main_8_pages):
+        for b in p["dummy_blocks"]:
+            c1 = b["col"]
+            sp = b["span"]
+            x0 = round(m_pt + (c1 - 1) * (col_w_pt + g_pt), 2)
+            x1 = round(x0 + sp * col_w_pt + (sp - 1) * g_pt, 2)
+            y0 = cm(b["y0"])
+            y1 = cm(b["y0"] + b["h"])
+            kind = b["kind"]
+            txt = f"{b['title']}\n{b['meta']}"
+            rf = send_rpc(s, f_in, "engine.execute", {
+                "command": "frame.create",
+                "params": {"spread": spread_idx, "rect": [x0, y0, x1, y1], "content": "text", "text": txt},
+            })["result"]
+            fid, sid = rf["id"], rf["story"]
+            is_mh = "masthead" in kind
+            fill_sw = "[Black]" if is_mh else ("DummyGray" if kind == "gray_box" else "DummyFill")
+            txt_sw = "[Paper]" if is_mh else "[Black]"
+            send_rpc(s, f_in, "engine.batch", {"commands": [
+                {"command": "object.fill", "params": {"ids": [fid], "swatch": fill_sw, "tint": 1.0}},
+                {"command": "object.stroke", "params": {"ids": [fid], "swatch": "DummyStroke", "weight": 1.4, "tint": 1.0}},
+                {"command": "object.textFrameOptions", "params": {"ids": [fid], "columns": 1, "inset": [6.0, 6.0, 6.0, 6.0], "verticalJustification": "center"}},
+                {"command": "text.select", "params": {"story": sid, "anchor": 0, "focus": 9999}},
+                {"command": "type.char", "params": {"attrs": {
+                    "fontFamily": "DB Hindi", "fontStyle": "Bold", "size": 14.5 if not is_mh else 16.5,
+                    "leading": {"kind": "points", "value": 17.5}, "fill": txt_sw, "fillTint": 1.0,
+                }}},
+                {"command": "type.para", "params": {"attrs": {"align": "center", "firstLineIndent": 0.0, "spaceAfter": 4.0}}},
+            ]})
+
+    dummy_pd_path = VAULT_DIR / "Aditya_Bharat_8Pages_Dummy_34x53.pagedesigner"
+    send_rpc(s, f_in, "app.save", {"path": str(dummy_pd_path)})
+
+    # Also open the Full 8-Page Live Newspaper Document in Tab 2 so both Dummy & Full Edition are open!
+    full_pd_path = VAULT_DIR / "Aditya_Bharat_Full_8Pages_34x53.pagedesigner"
+    if full_pd_path.exists():
+        send_rpc(s, f_in, "app.open", {"path": str(full_pd_path)})
+
+    # Activate Tab 0 (the 8-Page Structural Dummy), show Pages panel, fit page, and bring window to front!
+    send_rpc(s, f_in, "engine.execute", {"command": "file.activate", "params": {"index": 0}})
+    send_rpc(s, f_in, "engine.execute", {"command": "window.panel", "params": {"panel": "pages"}})
+    send_rpc(s, f_in, "engine.execute", {"command": "view.goToPage", "params": {"page": 1}})
+    send_rpc(s, f_in, "engine.execute", {"command": "view.fitPage", "params": {}})
+    send_rpc(s, f_in, "ui.focus", {})
+    s.close()
+    bring_page_designer_window_to_front()
+    print(f"SUCCESS: 8-Page Dummy saved to {dummy_pd_path} and opened in Page Designer!")
+
+
 if __name__ == "__main__":
     if "--patch" in sys.argv:
         patch_all_9_builders()
@@ -289,3 +378,5 @@ if __name__ == "__main__":
         build_combined_8page_document()
     elif "--open-all-tabs" in sys.argv:
         open_all_8_tabs_in_page_designer(close_existing=True)
+    elif "--dummy" in sys.argv:
+        build_and_open_8page_dummy_in_page_designer()

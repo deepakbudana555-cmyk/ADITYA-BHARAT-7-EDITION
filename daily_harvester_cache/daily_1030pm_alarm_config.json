@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "alarm_time_24h": "22:30",
+  "display_time": "10:30 PM",
+  "auto_harvest_fresh_news": true,
+  "build_all_7_editions_4_states": true,
+  "auto_advance_morning_dateline": true,
+  "default_p1_dummy": "AUTO",
+  "last_triggered_date": "",
+  "last_triggered_timestamp": "",
+  "last_built_edition_date": "",
+  "last_run_status": "Ready (Daily 10:30 PM / 22:30 IST Alarm Active)"
+}

@@ -132,9 +132,15 @@ def connect_page_designer():
             return
         except Exception:
             pass
-    pd_exe = Path(r"E:\RND\Gujarat_Samachar\Page_Designer_Software\pagedesigner.exe")
-    if not pd_exe.exists():
-        pd_exe = Path(r"E:\RND\open page layout software\pagedesigner.exe")
+    import os
+    pd_candidates = [
+        Path(os.environ.get("PAGEDESIGNER_EXE", "")) if os.environ.get("PAGEDESIGNER_EXE") else None,
+        VAULT_DIR / "Page_Designer_Software" / "pagedesigner.exe",
+        VAULT_DIR.parent / "Page_Designer_Software" / "pagedesigner.exe",
+        Path(r"E:\RND\Gujarat_Samachar\Page_Designer_Software\pagedesigner.exe"),
+        Path(r"E:\RND\open page layout software\pagedesigner.exe"),
+    ]
+    pd_exe = next((p for p in pd_candidates if p and p.exists()), pd_candidates[3])
     subprocess.Popen([str(pd_exe), "--control", str(PORT)], cwd=str(pd_exe.parent))
     for _ in range(30):
         time.sleep(0.4)
@@ -151,8 +157,11 @@ def connect_page_designer():
 
 def rpc(method: str, params: dict = None):
     import os
-    if os.environ.get("AB_SKIP_SAVE") == "1" and method in ("app.save", "app.export"):
-        return None
+    if os.environ.get("AB_SKIP_SAVE") == "1":
+        if method in ("app.save", "app.export"):
+            return None
+        if method == "engine.execute" and isinstance(params, dict) and params.get("command") == "file.exportPdf":
+            return None
     global req_id
     req_id += 1
     payload = {"id": req_id, "method": method, "params": params or {}}
@@ -163,10 +172,62 @@ def rpc(method: str, params: dict = None):
     return resp.get("result")
 
 
+def draw_bottom_cmyk_press_marka():
+    import os
+    sp = int(os.environ.get("AB_TARGET_SPREAD", "0"))
+    rpc("engine.batch", {"commands": [
+        {"command": "swatch.create", "params": {"name": "PressCyan", "color": "#00aeef"}},
+        {"command": "swatch.create", "params": {"name": "PressMagenta", "color": "#ec008c"}},
+        {"command": "swatch.create", "params": {"name": "PressYellow", "color": "#fff200"}},
+    ]})
+
+    y0 = cm(52.10)
+    y1 = cm(52.42)
+    rule_y = round((y0 + y1) / 2.0, 2)
+
+    # 1. Draw the Full-Width 8-Column Bottom Gray Rule FIRST so it sits BEHIND the CMYK boxes
+    r_bot_rule = rpc("engine.execute", {
+        "command": "line.create",
+        "params": {"spread": sp, "a": [cm(1.0), rule_y], "b": [cm(33.0), rule_y]},
+    })
+    style_cmds = [
+        {"command": "object.stroke", "params": {"ids": [r_bot_rule["id"]], "swatch": "[Black]", "weight": 2.0, "tint": 0.60}},
+    ]
+
+    # 2. Place 4 CMYK Boxes (C, M, Y, K) at 3 Places (LEFT, CENTER, RIGHT) ON TOP of the Gray Rule
+    patches = [
+        ("PressCyan", 1.0),
+        ("PressMagenta", 1.0),
+        ("PressYellow", 1.0),
+        ("[Black]", 1.0),
+    ]
+    box_w = mm(4.0)
+    group_w = round(len(patches) * box_w, 2)
+    group_centers_x = [cm(3.5), cm(17.0), cm(30.5)]
+
+    for cx in group_centers_x:
+        bar_x0 = round(cx - group_w / 2.0, 2)
+        for i, (sw, tn) in enumerate(patches):
+            px0 = round(bar_x0 + i * box_w, 2)
+            px1 = round(px0 + box_w, 2)
+            rf = rpc("engine.execute", {"command": "frame.create", "params": {"spread": sp, "rect": [px0, y0, px1, y1], "content": "unassigned"}})
+            fid = rf["id"]
+            style_cmds.append({"command": "object.fill", "params": {"ids": [fid], "swatch": sw, "tint": tn}})
+            style_cmds.append({"command": "object.stroke", "params": {"ids": [fid], "swatch": "[Black]", "weight": 0.35, "tint": 0.85}})
+
+    if style_cmds:
+        rpc("engine.batch", {"commands": style_cmds})
+
+
 def cmd(command: str, params: dict = None):
     import os
     if command == "file.close" and (os.environ.get("AB_NO_CLOSE") == "1" or os.environ.get("AB_TARGET_SPREAD") is not None):
         return None
+    if command == "edit.deselectAll":
+        try:
+            draw_bottom_cmyk_press_marka()
+        except Exception:
+            pass
     p = dict(params or {})
     if os.environ.get("AB_TARGET_SPREAD") is not None and "spread" in p:
         p["spread"] = int(os.environ["AB_TARGET_SPREAD"])
@@ -296,7 +357,7 @@ def fit_aditya_bharat_headline(
         return best
 
     def stretch_line(byte_a: int, byte_b: int, max_total_lines: int):
-        lo_s, hi_s = 100, 108
+        lo_s, hi_s = 100, 114
         best_s = 100
         while lo_s <= hi_s:
             mid_s = (lo_s + hi_s) // 2
@@ -888,27 +949,19 @@ def build_aditya_bharat_page6_business():
         {"command": "type.para", "params": {"attrs": {"align": "center", "firstLineIndent": 0.0, "hyphenate": False, "gridAlign": "none"}}},
     ])
 
-    logo_w = cm(8.5)
+    logo_w = cm(4.85)
     logo_x0 = round((mh_x0 + mh_x1 - logo_w) / 2.0, 2)
     logo_x1 = round(logo_x0 + logo_w, 2)
+    logo_img_path = PHOTOS_DIR / "aditya_bharat_masthead_logo.png"
     r_mh_logo = cmd("frame.create", {
         "spread": 0,
-        "rect": [logo_x0, round(mh_y0 - 6.0, 2), logo_x1, round(mh_y1 + 4.0, 2)],
-        "content": "text",
-        "text": "आदित्य भारत",
+        "rect": [logo_x0, round(mh_y0 + mm(0.8), 2), logo_x1, sec_y1],
+        "content": "graphic",
     })
     batch([
-        {"command": "object.textFrameOptions", "params": {"ids": [r_mh_logo["id"]], "columns": 1, "inset": [0.0, 0.0, 0.0, 0.0], "verticalJustification": "center"}},
-        {"command": "text.select", "params": {"story": r_mh_logo["story"], "anchor": 0, "focus": 99}},
-        {"command": "type.char", "params": {"attrs": {
-            "fontFamily": "DB Rasrand Bold",
-            "fontStyle": "Bold",
-            "size": 28.0,
-            "leading": {"kind": "points", "value": 29.0},
-            "fill": "[Black]",
-            "fillTint": 1.0,
-        }}},
-        {"command": "type.para", "params": {"attrs": {"align": "center", "firstLineIndent": 0.0, "hyphenate": False, "gridAlign": "none"}}},
+        {"command": "file.place", "params": {"frame": r_mh_logo["id"], "path": str(logo_img_path)}},
+        {"command": "object.fit", "params": {"ids": [r_mh_logo["id"]], "mode": "fitProportionally"}},
+        {"command": "object.stroke", "params": {"ids": [r_mh_logo["id"]], "swatch": "[None]", "weight": 0.0, "tint": 0.0}},
     ])
 
     pnum_w = cm(1.4)
@@ -933,13 +986,55 @@ def build_aditya_bharat_page6_business():
         {"command": "type.para", "params": {"attrs": {"align": "right", "firstLineIndent": 0.0, "hyphenate": False, "gridAlign": "none"}}},
     ])
 
+    import os
+    import datetime as _dt
+    ed_code = os.environ.get("AB_EDITION", "RAIPUR").strip().upper()
+    city_map = {
+        "RAIPUR": "रायपुर",
+        "NEW_DELHI": "नई दिल्ली",
+        "BILASPUR": "बिलासपुर",
+        "BHOPAL": "भोपाल",
+        "JAIPUR": "जयपुर",
+        "INDORE": "इंदौर",
+        "RAJNANDGAON": "राजनांदगांव",
+    }
+    city_hi = city_map.get(ed_code, "रायपुर")
+    date_env = os.environ.get("AB_EDITION_DATE", "19-11-2026").strip()
+    try:
+        dt_obj = _dt.datetime.strptime(date_env, "%d-%m-%Y").date()
+    except Exception:
+        dt_obj = _dt.date(2026, 11, 19)
+    hi_weekdays = ["सोमवार", "मंगलवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार", "रविवार"]
+    hi_months = {
+        1: "जनवरी", 2: "फरवरी", 3: "मार्च", 4: "अप्रैल", 5: "मई", 6: "जून",
+        7: "जुलाई", 8: "अगस्त", 9: "सितंबर", 10: "अक्टूबर", 11: "नवंबर", 12: "दिसंबर",
+    }
+    dynamic_dateline = f"{city_hi}, {hi_weekdays[dt_obj.weekday()]}, {dt_obj.day} {hi_months[dt_obj.month]} {dt_obj.year}  |"
+
+    p6_data = {}
+    p6_json_env = os.environ.get("AB_P6_JSON_PATH", "").strip()
+    if p6_json_env and Path(p6_json_env).exists():
+        try:
+            p6_data = json.loads(Path(p6_json_env).read_text(encoding="utf-8"))
+        except Exception:
+            p6_data = {}
+    else:
+        cand_json = VAULT_DIR / "daily_harvester_cache" / f"{date_env}_KAROBAR_PAGE6_STORIES.json"
+        if cand_json.exists():
+            try:
+                p6_data = json.loads(cand_json.read_text(encoding="utf-8"))
+            except Exception:
+                p6_data = {}
+    if p6_data.get("dateline_override"):
+        dynamic_dateline = p6_data["dateline_override"]
+
     dt_x0 = round(logo_x1 + cm(0.4), 2)
     dt_x1 = round(pnum_x0 - cm(0.2), 2)
     r_mh_dt = cmd("frame.create", {
         "spread": 0,
         "rect": [dt_x0, sec_y0, dt_x1, sec_y1],
         "content": "text",
-        "text": "इंदौर, मंगलवार, 20 अक्टूबर 2026  |",
+        "text": dynamic_dateline,
     })
     batch([
         {"command": "object.textFrameOptions", "params": {"ids": [r_mh_dt["id"]], "columns": 1, "verticalJustification": "center"}},
@@ -985,16 +1080,16 @@ def build_aditya_bharat_page6_business():
             "verticalJustification": "top",
         }},
     ])
-    mkt_bullets = (
+    mkt_bullets = p6_data.get("market_meter_bullets") or (
         "• बीएसई सेंसेक्स : 84,620 अंक (+645 अंक उछाल), निफ्टी पच्चीस हजार आठ सौ के पार बंद।\n"
         "• सर्राफा बाजार (इंदौर/मुंबई) : सोना 24 कैरेट 78,450 रुपये प्रति दस ग्राम, चांदी 94,200 रुपये प्रति किलो।\n"
         "• विदेशी मुद्रा विनिमय : डॉलर के मुकाबले रुपया बारह पैसे मजबूत होकर 83.82 के स्तर पर टिका।\n"
         "• अंतरराष्ट्रीय कच्चा तेल : ब्रेंट क्रूड नरम पड़कर चौहत्तर डॉलर प्रति बैरल पर आया, आयात बिल में राहत।\n"
-        "• विदेशी संस्थागत निवेशक : अक्टूबर के तीसरे सप्ताह में भारतीय शेयर बाजार में बारह हजार करोड़ रुपये की शुद्ध लिवाली।"
+        "• विदेशी संस्थागत निवेशक : भारतीय शेयर बाजार में बारह हजार करोड़ रुपये की शुद्ध लिवाली।"
     )
     fit_box_completely(
         r_mkt_box["story"],
-        head_str="बाजार मीटर : सेंसेक्स और सर्राफा",
+        head_str=p6_data.get("market_meter_title") or "बाजार मीटर : सेंसेक्स और सर्राफा",
         raw_bullets=mkt_bullets,
         head_pt=17.5,
         head_align="center",
@@ -1008,7 +1103,8 @@ def build_aditya_bharat_page6_business():
     fl_x1 = grid.col_x1(3, 6)
     fl_cur_y = b1_y0
 
-    flyer_sub_txt = "मेक इन इंडिया और पीएलआई योजना का असर : इलेक्ट्रॉनिक्स व ऑटो पार्ट्स की वैश्विक मांग बढ़ी"
+    s1 = p6_data.get("s1_flyer") or {}
+    flyer_sub_txt = s1.get("subhead") or "मेक इन इंडिया और पीएलआई योजना का असर : इलेक्ट्रॉनिक्स व ऑटो पार्ट्स की वैश्विक मांग बढ़ी"
     _, _, _, fl_sub_h = fit_aditya_bharat_headline(
         0, fl_x0, fl_cur_y, fl_x1,
         raw_text=flyer_sub_txt,
@@ -1022,7 +1118,7 @@ def build_aditya_bharat_page6_business():
     )
     fl_cur_y = round(fl_cur_y + fl_sub_h + 1.0, 2)
 
-    flyer_head_txt = "सेमीकंडक्टर व ऑटो निर्यात में भारत की बड़ी छलांग"
+    flyer_head_txt = s1.get("headline") or "सेमीकंडक्टर व ऑटो निर्यात में भारत की बड़ी छलांग"
     _, _, fl_h_pt, fl_hh = fit_aditya_bharat_headline(
         0, fl_x0, fl_cur_y, fl_x1,
         raw_text=flyer_head_txt,
@@ -1050,7 +1146,7 @@ def build_aditya_bharat_page6_business():
         "verticalJustification": "top",
         "columnRule": False,
     })
-    place_red_subject_blurb(0, grid.col_x0(3), round(fl_body_y0 + cm(1.8), 2), "उछाल")
+    place_red_subject_blurb(0, grid.col_x0(3), round(fl_body_y0 + cm(1.8), 2), s1.get("blurb") or "उछाल")
 
     fl_cap_y1 = round(snap_underflow_top(fl_body_y1, num_underflow_lines=7) - 3.2, 2)
     place_photo_and_caption_cmyk(
@@ -1059,17 +1155,17 @@ def build_aditya_bharat_page6_business():
         fl_body_y0,
         grid.col_x1(5, 2),
         fl_cap_y1,
-        "p6_auto_831643_print.jpg",
+        s1.get("photo") or "p6_auto_831643_print.jpg",
         "ab_p6_flyer_auto_cmyk.jpg",
-        "आधुनिक ऑटोमोबाइल और इलेक्ट्रॉनिक्स विनिर्माण संयंत्र में तैयार होते निर्यात वाहन। — फाइल फोटो",
+        s1.get("caption") or "आधुनिक ऑटोमोबाइल और इलेक्ट्रॉनिक्स विनिर्माण संयंत्र में तैयार होते निर्यात वाहन। — फाइल फोटो",
         cap_h=23.0,
     )
-    fl_body_txt = (
+    fl_body_txt = s1.get("body") or (
         "प्रोडक्शन लिंक्ड इंसेंटिव योजना और स्वदेशी सप्लाई चेन के विस्तार से चालू वित्त वर्ष की पहली छमाही में भारत के इंजीनियरिंग, ऑटोमोबाइल और "
         "इलेक्ट्रॉनिक्स निर्यात ने पैंसठ अरब डॉलर का नया कीर्तिमान छू लिया है। वाणिज्य मंत्रालय के आंकड़ों के अनुसार यूरोप, पश्चिम एशिया और लैटिन अमेरिकी "
         "बाजारों में भारतीय यात्री वाहनों तथा स्मार्टफोन उपकरणों की मांग में अड़तीस प्रतिशत की तेज वृद्धि दर्ज की गई है।"
     )
-    fit_aditya_bharat_body(r_fl_body["story"], "नई दिल्ली", "ब्यूरो", fl_body_txt)
+    fit_aditya_bharat_body(r_fl_body["story"], s1.get("city") or "नई दिल्ली", s1.get("agency") or "ब्यूरो", fl_body_txt)
 
     sep1_y = round(b1_y1 + mm(1.75), 2)
     r_sep1 = cmd("line.create", {"spread": 0, "a": [grid.print_x0, sep1_y], "b": [grid.print_x1, sep1_y]})
@@ -1087,13 +1183,14 @@ def build_aditya_bharat_page6_business():
     r3_x1 = grid.col_x1(1, 3)
     r3_mid_y = snap_frame_bottom_to_baseline(round(b2_y0 + cm(7.8), 2))
 
+    s2 = p6_data.get("s2_left_top") or {}
     s2_top_pt = place_multi_col_story(
         grid, r3_x0, r3_x1, b2_y0, r3_mid_y, cols=3,
-        headline="डिजिटल बैंकिंग से छोटे उद्यमों को बिना गारंटी मिलेगा तुरंत ऋण",
-        city="मुंबई",
-        agency="ब्यूरो",
-        blurb_word="बैंकिंग",
-        body=(
+        headline=s2.get("headline") or "डिजिटल बैंकिंग से छोटे उद्यमों को बिना गारंटी मिलेगा तुरंत ऋण",
+        city=s2.get("city") or "मुंबई",
+        agency=s2.get("agency") or "ब्यूरो",
+        blurb_word=s2.get("blurb") or "बैंकिंग",
+        body=s2.get("body") or (
             "भारतीय रिजर्व बैंक और सार्वजनिक क्षेत्र के बैंकों ने यूपीआई लेनदेन के इतिहास के आधार पर छोटे दुकानदारों तथा सूक्ष्म उद्यमों को "
             "दस लाख रुपये तक का बिना गारंटी कार्यशील पूंजी ऋण मात्र पंद्रह मिनट में स्वीकृत करने का नया डिजिटल प्लेटफॉर्म शुरू किया है।"
         ),
@@ -1105,13 +1202,14 @@ def build_aditya_bharat_page6_business():
     r_r3_sep = cmd("line.create", {"spread": 0, "a": [r3_x0, r3_sep_y], "b": [r3_x1, r3_sep_y]})
     cmd("object.stroke", {"ids": [r_r3_sep["id"]], "swatch": "[Black]", "weight": 0.65, "tint": 0.85})
 
+    s3 = p6_data.get("s3_left_bot") or {}
     s2_bot_pt = place_multi_col_story(
         grid, r3_x0, r3_x1, round(r3_sep_y + mm(1.75), 2), b2_y1, cols=3,
-        headline="इलेक्ट्रिक वाहन और लिथियम बैटरी प्लांट में पांच अरब डॉलर का निवेश",
-        city="अहमदाबाद",
-        agency="एजेंसी",
-        blurb_word="निवेश",
-        body=(
+        headline=s3.get("headline") or "इलेक्ट्रिक वाहन और लिथियम बैटरी प्लांट में पांच अरब डॉलर का निवेश",
+        city=s3.get("city") or "अहमदाबाद",
+        agency=s3.get("agency") or "एजेंसी",
+        blurb_word=s3.get("blurb") or "निवेश",
+        body=s3.get("body") or (
             "स्वच्छ परिवहन को बढ़ावा देने के लिए देश की प्रमुख ऑटोमोबाइल कंपनियों ने गुजरात, मध्य प्रदेश और महाराष्ट्र में चार नई गीगा-बैटरी "
             "फैक्ट्रियां स्थापित करने की घोषणा की है। इससे इलेक्ट्रिक वाहनों की कीमतों में बीस प्रतिशत तक की कमी आएगी।"
         ),
@@ -1124,7 +1222,8 @@ def build_aditya_bharat_page6_business():
     lead_x1 = grid.col_x1(4, 5)
     lead_cur_y = b2_y0
 
-    lead_head_txt = "जीएसटी संग्रह दो लाख करोड़ के पार, विनिर्माण क्षेत्र में नया उछाल"
+    s4 = p6_data.get("s4_lead") or {}
+    lead_head_txt = s4.get("headline") or "जीएसटी संग्रह दो लाख करोड़ के पार, विनिर्माण क्षेत्र में नया उछाल"
     _, _, lead_h_pt, lead_hh = fit_aditya_bharat_headline(
         0, lead_x0, lead_cur_y, lead_x1,
         raw_text=lead_head_txt,
@@ -1138,7 +1237,7 @@ def build_aditya_bharat_page6_business():
     )
     lead_cur_y = round(lead_cur_y + lead_hh + 0.5, 2)
 
-    lead_sub_txt = "त्योहारी सीजन और औद्योगिक मांग से राजकोषीय घाटे में कमी : राज्यों को समय से पहले मिली कर हिस्सेदारी"
+    lead_sub_txt = s4.get("subhead") or "त्योहारी सीजन और औद्योगिक मांग से राजकोषीय घाटे में कमी : राज्यों को समय से पहले मिली कर हिस्सेदारी"
     _, _, _, lead_sub_h = fit_aditya_bharat_headline(
         0, lead_x0, lead_cur_y, lead_x1,
         raw_text=lead_sub_txt,
@@ -1169,7 +1268,7 @@ def build_aditya_bharat_page6_business():
         "verticalJustification": "top",
         "columnRule": False,
     })
-    place_red_subject_blurb(0, grid.col_x0(4), round(lead_body_y0 + cm(2.1), 2), "रिकॉर्ड")
+    place_red_subject_blurb(0, grid.col_x0(4), round(lead_body_y0 + cm(2.1), 2), s4.get("blurb") or "रिकॉर्ड")
 
     # Compact photo in Cols 5..6 + 8-line underflow
     l_cap_y1 = round(snap_underflow_top(lead_body_y1, num_underflow_lines=8) - 3.2, 2)
@@ -1179,19 +1278,19 @@ def build_aditya_bharat_page6_business():
         lead_body_y0,
         grid.col_x1(5, 2),
         l_cap_y1,
-        "p6_gst_831886_print.jpg",
+        s4.get("photo") or "p6_gst_831886_print.jpg",
         "ab_p6_lead_gst_cmyk.jpg",
-        "नई दिल्ली स्थित केंद्रीय वित्त मंत्रालय परिसर में जीएसटी परिषद की उच्चस्तरीय बैठक। — फाइल फोटो",
+        s4.get("caption") or "नई दिल्ली स्थित केंद्रीय वित्त मंत्रालय परिसर में जीएसटी परिषद की उच्चस्तरीय बैठक। — फाइल फोटो",
         cap_h=23.0,
     )
-    lead_body_txt = (
+    lead_body_txt = s4.get("body") or (
         "त्योहारी सीजन की मजबूत उपभोक्ता मांग और ई-इन्वॉयसिंग प्रणाली की सख्ती के चलते देश का मासिक वस्तु एवं सेवा कर संग्रह दो लाख बारह हजार करोड़ "
         "रुपये के ऐतिहासिक स्तर पर पहुंच गया है। वित्त मंत्रालय द्वारा जारी आंकड़ों के अनुसार पिछले वर्ष की समान अवधि की तुलना में कर संग्रह में चौदह "
         "प्रतिशत की वृद्धि दर्ज की गई है।\n"
         "महाराष्ट्र, गुजरात, कर्नाटक, तमिलनाडु और मध्य प्रदेश ने औद्योगिक कर संग्रह में सर्वाधिक योगदान दिया है। केंद्र सरकार ने राज्यों को उनके हिस्से के "
         "अस्सी हजार करोड़ रुपये की किस्त भी तुरंत जारी कर दी है, जिससे राज्य स्तर पर सड़क, सिंचाई और औद्योगिक पार्कों के निर्माण को नई गति मिलेगी।"
     )
-    fit_aditya_bharat_body(r_lead_body["story"], "नई दिल्ली", "विशेष संवाददाता", lead_body_txt)
+    fit_aditya_bharat_body(r_lead_body["story"], s4.get("city") or "नई दिल्ली", s4.get("agency") or "विशेष संवाददाता", lead_body_txt)
 
     # Col 8 (LAST Column of the Right 5-Column Lead = Full-Height 40% Gray Box, 100% filled!)
     box5_x0 = grid.col_x0(8)
@@ -1212,7 +1311,7 @@ def build_aditya_bharat_page6_business():
             "verticalJustification": "top",
         }},
     ])
-    lbox5_bullets = (
+    lbox5_bullets = s4.get("box_bullets") or (
         "• छोटे व्यापारियों के लिए जीएसटी रिटर्न दाखिल करने की प्रक्रिया को पूरी तरह स्वचालित बनाया गया।\n"
         "• निर्यातकों को सात कार्यदिवस के भीतर आईजीएसटी रिफंड सीधे बैंक खाते में मिलेगा।\n"
         "• स्वास्थ्य बीमा और कृषि उपकरणों पर कर की दरों को तर्कसंगत बनाने पर बनी सहमति।\n"
@@ -1220,7 +1319,7 @@ def build_aditya_bharat_page6_business():
     )
     fit_box_completely(
         r_lbox5["story"],
-        head_str="प्रमुख बिंदु",
+        head_str=s4.get("box_title") or "प्रमुख बिंदु",
         raw_bullets=lbox5_bullets,
         head_pt=16.0,
         head_align="center",
@@ -1239,32 +1338,46 @@ def build_aditya_bharat_page6_business():
     b3_y0 = round(sep2_y + mm(1.75), 2)
     b3_y1 = snap_frame_bottom_to_baseline(round(b3_y0 + cm(11.2), 2))
 
-    b3_stories = [
-        (
-            1, 2,
-            "त्योहारी मांग से सर्राफा बाजार में भारी रौनक",
-            "इंदौर", "व्यापार संवाददाता", "सर्राफा",
-            "धनतेरस और दीपावली से पहले इंदौर, भोपाल और जयपुर के सर्राफा बाजारों में हल्के वजन के सोने के आभूषणों तथा चांदी के सिक्कों की अग्रिम बुकिंग में चालीस प्रतिशत की वृद्धि दर्ज की गई है।",
-        ),
-        (
-            3, 2,
-            "भारतीय एआई स्टार्टअप ने जुटाया रिकॉर्ड फंड",
-            "बेंगलुरु", "एजेंसी", "टेक",
-            "कृत्रिम बुद्धिमत्ता, फिनटेक और डीप-टेक सेक्टर के भारतीय स्टार्टअप्स ने तीसरी तिमाही में वैश्विक वेंचर कैपिटल फंडों से चार अरब डॉलर की नई पूंजी जुटाकर एशिया में शीर्ष स्थान हासिल किया है।",
-        ),
-        (
-            5, 2,
-            "छोटे शहरों में आवासीय प्रॉपर्टी की बिक्री बढ़ी",
-            "भोपाल", "ब्यूरो", "प्रॉपर्टी",
-            "इंदौर, भोपाल, रायपुर और सूरत जैसे उभरते शहरों में मेट्रो विस्तार और आईटी पार्कों के चलते किफायती तथा प्रीमियम अपार्टमेंट की बिक्री में पच्चीस फीसदी का उछाल आया है।",
-        ),
-        (
-            7, 2,
-            "कृषि व खाद्य निर्यात से किसानों की आय बढ़ी",
-            "नई दिल्ली", "एजेंसी", "निर्यात",
-            "बासमती चावल, मसालों, सोया उत्पादों और जैविक फलों के निर्यात में भारत ने मध्य-पूर्व तथा यूरोपीय बाजारों में नए अनुबंध किए हैं, जिसका सीधा लाभ करोड़ों किसानों को मिल रहा है।",
-        ),
-    ]
+    raw_b3 = p6_data.get("band3_stories")
+    if raw_b3 and len(raw_b3) == 4:
+        b3_stories = [
+            (
+                1 + 2 * i, 2,
+                it.get("headline", ""),
+                it.get("city", "नई दिल्ली"),
+                it.get("agency", "ब्यूरो"),
+                it.get("blurb", "व्यापार"),
+                it.get("body", ""),
+            )
+            for i, it in enumerate(raw_b3)
+        ]
+    else:
+        b3_stories = [
+            (
+                1, 2,
+                "त्योहारी मांग से सर्राफा बाजार में भारी रौनक",
+                "इंदौर", "व्यापार संवाददाता", "सर्राफा",
+                "धनतेरस और दीपावली से पहले इंदौर, भोपाल और जयपुर के सर्राफा बाजारों में हल्के वजन के सोने के आभूषणों तथा चांदी के सिक्कों की अग्रिम बुकिंग में चालीस प्रतिशत की वृद्धि दर्ज की गई है।",
+            ),
+            (
+                3, 2,
+                "भारतीय एआई स्टार्टअप ने जुटाया रिकॉर्ड फंड",
+                "बेंगलुरु", "एजेंसी", "टेक",
+                "कृत्रिम बुद्धिमत्ता, फिनटेक और डीप-टेक सेक्टर के भारतीय स्टार्टअप्स ने तीसरी तिमाही में वैश्विक वेंचर कैपिटल फंडों से चार अरब डॉलर की नई पूंजी जुटाकर एशिया में शीर्ष स्थान हासिल किया है।",
+            ),
+            (
+                5, 2,
+                "छोटे शहरों में आवासीय प्रॉपर्टी की बिक्री बढ़ी",
+                "भोपाल", "ब्यूरो", "प्रॉपर्टी",
+                "इंदौर, भोपाल, रायपुर और सूरत जैसे उभरते शहरों में मेट्रो विस्तार और आईटी पार्कों के चलते किफायती तथा प्रीमियम अपार्टमेंट की बिक्री में पच्चीस फीसदी का उछाल आया है।",
+            ),
+            (
+                7, 2,
+                "कृषि व खाद्य निर्यात से किसानों की आय बढ़ी",
+                "नई दिल्ली", "एजेंसी", "निर्यात",
+                "बासमती चावल, मसालों, सोया उत्पादों और जैविक फलों के निर्यात में भारत ने मध्य-पूर्व तथा यूरोपीय बाजारों में नए अनुबंध किए हैं, जिसका सीधा लाभ करोड़ों किसानों को मिल रहा है।",
+            ),
+        ]
 
     b3_pts = []
     for idx, (c_start, c_span, h_txt, c_txt, a_txt, bl_txt, b_txt) in enumerate(b3_stories):
@@ -1292,7 +1405,8 @@ def build_aditya_bharat_page6_business():
     anc_x1 = grid.col_x1(1, 5)
     anc_cur_y = bot_y0
 
-    anchor_head = "दलाल स्ट्रीट में विदेशी निवेशकों की लिवाली"
+    s9 = p6_data.get("s9_anchor") or {}
+    anchor_head = s9.get("headline") or "दलाल स्ट्रीट में विदेशी निवेशकों की लिवाली"
     _, _, anc_h_pt, anc_hh = fit_aditya_bharat_headline(
         0, anc_x0, anc_cur_y, anc_x1,
         raw_text=anchor_head,
@@ -1306,7 +1420,7 @@ def build_aditya_bharat_page6_business():
     )
     anc_cur_y = round(bot_y0 + 44.5, 2)
 
-    anchor_sub = "मजबूत तिमाही नतीजों और घरेलू म्यूचुअल फंडों के निवेश से भारतीय शेयर बाजार ने छुआ नया शिखर"
+    anchor_sub = s9.get("subhead") or "मजबूत तिमाही नतीजों और घरेलू म्यूचुअल फंडों के निवेश से भारतीय शेयर बाजार ने छुआ नया शिखर"
     _, _, anc_sub_pt, anc_sub_h = fit_aditya_bharat_headline(
         0, anc_x0, anc_cur_y, anc_x1,
         raw_text=anchor_sub,
@@ -1334,7 +1448,7 @@ def build_aditya_bharat_page6_business():
         "verticalJustification": "top",
         "columnRule": False,
     })
-    place_red_subject_blurb(0, grid.col_x0(1), round(anc_body_y0 + cm(1.8), 2), "बाजार")
+    place_red_subject_blurb(0, grid.col_x0(1), round(anc_body_y0 + cm(1.8), 2), s9.get("blurb") or "बाजार")
 
     acap_y1 = round(snap_underflow_top(anc_body_y1, num_underflow_lines=8) - 3.2, 2)
     place_photo_and_caption_cmyk(
@@ -1343,23 +1457,24 @@ def build_aditya_bharat_page6_business():
         anc_body_y0,
         grid.col_x1(3, 2),
         acap_y1,
-        "p6_bse_832092_print.jpg",
+        s9.get("photo") or "p6_bse_832092_print.jpg",
         "ab_p6_anchor_bse_cmyk.jpg",
-        "मुंबई स्थित बॉम्बे स्टॉक एक्सचेंज परिसर में तेजी के संकेतों के साथ स्क्रीन। — फाइल फोटो",
+        s9.get("caption") or "मुंबई स्थित बॉम्बे स्टॉक एक्सचेंज परिसर में तेजी के संकेतों के साथ स्क्रीन। — फाइल फोटो",
         cap_h=23.0,
     )
-    anc_body = (
+    anc_body = s9.get("body") or (
         "भारतीय कंपनियों के शानदार तिमाही नतीजों और खुदरा महंगाई में आई नरमी के बाद विदेशी संस्थागत निवेशकों ने भारतीय शेयर बाजार में एक बार फिर "
         "बड़े पैमाने पर खरीदारी शुरू कर दी है। इसके साथ ही घरेलू खुदरा निवेशकों द्वारा एसआईपी के जरिए हर महीने बाईस हजार करोड़ रुपये से अधिक का "
         "निवेश आने से बाजार को अभूतपूर्व स्थिरता मिली है। बैंकिंग, आईटी, फार्मा और कैपिटल गुड्स शेयरों में सबसे अधिक तेजी देखी जा रही है।"
     )
-    fit_aditya_bharat_body(r_anc_body["story"], "मुंबई", "आर्थिक ब्यूरो", anc_body)
+    fit_aditya_bharat_body(r_anc_body["story"], s9.get("city") or "मुंबई", s9.get("agency") or "आर्थिक ब्यूरो", anc_body)
 
     # --- 4B. Right 3-Column Green Energy Corporate Package (Cols 6..8) ---
     b4r_x0 = grid.col_x0(6)
     b4r_x1 = grid.col_x1(6, 3)
     b4r_cur_y = bot_y0
-    b4r_head = "सोलर उपकरण और हरित ऊर्जा में आत्मनिर्भर बनेगा भारत"
+    s10 = p6_data.get("s10_bot_right") or {}
+    b4r_head = s10.get("headline") or "सोलर उपकरण और हरित ऊर्जा में आत्मनिर्भर बनेगा भारत"
     _, _, b4r_pt, b4r_hh = fit_aditya_bharat_headline(
         0, b4r_x0, b4r_cur_y, b4r_x1,
         raw_text=b4r_head,
@@ -1373,7 +1488,7 @@ def build_aditya_bharat_page6_business():
     )
     b4r_cur_y = round(b4r_cur_y + b4r_hh + 0.5, 2)
 
-    b4r_sub = "पचास गीगावॉट के नए सोलर सेल व टरबाइन विनिर्माण क्लस्टरों में उत्पादन शुरू"
+    b4r_sub = s10.get("subhead") or "पचास गीगावॉट के नए सोलर सेल व टरबाइन विनिर्माण क्लस्टरों में उत्पादन शुरू"
     _, _, _, b4r_sh = fit_aditya_bharat_headline(
         0, b4r_x0, b4r_cur_y, b4r_x1,
         raw_text=b4r_sub,
@@ -1399,12 +1514,12 @@ def build_aditya_bharat_page6_business():
         "verticalJustification": "top",
         "columnRule": False,
     })
-    place_red_subject_blurb(0, b4r_x0, round(b4r_by0 + cm(1.5), 2), "ऊर्जा")
-    b4r_body = (
+    place_red_subject_blurb(0, b4r_x0, round(b4r_by0 + cm(1.5), 2), s10.get("blurb") or "ऊर्जा")
+    b4r_body = s10.get("body") or (
         "नवीकरणीय ऊर्जा क्षेत्र में आयात पर निर्भरता समाप्त करने के लिए देश में सोलर मॉड्यूल, पवन ऊर्जा टरबाइन और इलेक्ट्रोलाइजर निर्माण के पंद्रह "
         "बड़े औद्योगिक क्लस्टर शुरू हो गए हैं। इससे न केवल बिजली उत्पादन की लागत घटेगी बल्कि भारत स्वच्छ ऊर्जा उपकरणों का प्रमुख निर्यातक भी बनेगा।"
     )
-    fit_aditya_bharat_body(r_b4r_b["story"], "नई दिल्ली", "ब्यूरो", b4r_body)
+    fit_aditya_bharat_body(r_b4r_b["story"], s10.get("city") or "नई दिल्ली", s10.get("agency") or "ब्यूरो", b4r_body)
 
     cmd("edit.deselectAll")
     cmd("view.fitPage", {})
@@ -1415,7 +1530,7 @@ def build_aditya_bharat_page6_business():
     rpc("app.save", {"path": str(out_pd)})
     rpc("app.export", {"path": str(out_png), "page": 0, "scale": 1.5})
     try:
-        rpc("app.export", {"path": str(out_pdf), "page": 0})
+        rpc("engine.execute", {"command": "file.exportPdf", "params": {"path": str(out_pdf)}})
     except Exception:
         pass
 

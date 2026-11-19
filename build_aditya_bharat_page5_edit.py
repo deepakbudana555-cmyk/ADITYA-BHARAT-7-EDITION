@@ -246,10 +246,62 @@ def rpc(method: str, params: dict = None):
     return resp.get("result")
 
 
+def draw_bottom_cmyk_press_marka():
+    import os
+    sp = int(os.environ.get("AB_TARGET_SPREAD", "0"))
+    rpc("engine.batch", {"commands": [
+        {"command": "swatch.create", "params": {"name": "PressCyan", "color": "#00aeef"}},
+        {"command": "swatch.create", "params": {"name": "PressMagenta", "color": "#ec008c"}},
+        {"command": "swatch.create", "params": {"name": "PressYellow", "color": "#fff200"}},
+    ]})
+
+    y0 = cm(52.10)
+    y1 = cm(52.42)
+    rule_y = round((y0 + y1) / 2.0, 2)
+
+    # 1. Draw the Full-Width 8-Column Bottom Gray Rule FIRST so it sits BEHIND the CMYK boxes
+    r_bot_rule = rpc("engine.execute", {
+        "command": "line.create",
+        "params": {"spread": sp, "a": [cm(1.0), rule_y], "b": [cm(33.0), rule_y]},
+    })
+    style_cmds = [
+        {"command": "object.stroke", "params": {"ids": [r_bot_rule["id"]], "swatch": "[Black]", "weight": 2.0, "tint": 0.60}},
+    ]
+
+    # 2. Place 4 CMYK Boxes (C, M, Y, K) at 3 Places (LEFT, CENTER, RIGHT) ON TOP of the Gray Rule
+    patches = [
+        ("PressCyan", 1.0),
+        ("PressMagenta", 1.0),
+        ("PressYellow", 1.0),
+        ("[Black]", 1.0),
+    ]
+    box_w = mm(4.0)
+    group_w = round(len(patches) * box_w, 2)
+    group_centers_x = [cm(3.5), cm(17.0), cm(30.5)]
+
+    for cx in group_centers_x:
+        bar_x0 = round(cx - group_w / 2.0, 2)
+        for i, (sw, tn) in enumerate(patches):
+            px0 = round(bar_x0 + i * box_w, 2)
+            px1 = round(px0 + box_w, 2)
+            rf = rpc("engine.execute", {"command": "frame.create", "params": {"spread": sp, "rect": [px0, y0, px1, y1], "content": "unassigned"}})
+            fid = rf["id"]
+            style_cmds.append({"command": "object.fill", "params": {"ids": [fid], "swatch": sw, "tint": tn}})
+            style_cmds.append({"command": "object.stroke", "params": {"ids": [fid], "swatch": "[Black]", "weight": 0.35, "tint": 0.85}})
+
+    if style_cmds:
+        rpc("engine.batch", {"commands": style_cmds})
+
+
 def cmd(command: str, params: dict = None):
     import os
     if command == "file.close" and (os.environ.get("AB_NO_CLOSE") == "1" or os.environ.get("AB_TARGET_SPREAD") is not None):
         return None
+    if command == "edit.deselectAll":
+        try:
+            draw_bottom_cmyk_press_marka()
+        except Exception:
+            pass
     p = dict(params or {})
     if os.environ.get("AB_TARGET_SPREAD") is not None and "spread" in p:
         p["spread"] = int(os.environ["AB_TARGET_SPREAD"])
@@ -616,27 +668,19 @@ def build_aditya_bharat_page5_edit():
         {"command": "type.para", "params": {"attrs": {"align": "center", "firstLineIndent": 0.0, "hyphenate": False, "gridAlign": "none"}}},
     ])
 
-    logo_w = cm(8.5)
+    logo_w = cm(4.85)
     logo_x0 = round((mh_x0 + mh_x1 - logo_w) / 2.0, 2)
     logo_x1 = round(logo_x0 + logo_w, 2)
+    logo_img_path = PHOTOS_DIR / "aditya_bharat_masthead_logo.png"
     r_mh_logo = cmd("frame.create", {
         "spread": 0,
-        "rect": [logo_x0, round(mh_y0 - 6.0, 2), logo_x1, round(mh_y1 + 4.0, 2)],
-        "content": "text",
-        "text": "आदित्य भारत",
+        "rect": [logo_x0, round(mh_y0 + mm(0.8), 2), logo_x1, sec_y1],
+        "content": "graphic",
     })
     batch([
-        {"command": "object.textFrameOptions", "params": {"ids": [r_mh_logo["id"]], "columns": 1, "inset": [0.0, 0.0, 0.0, 0.0], "verticalJustification": "center"}},
-        {"command": "text.select", "params": {"story": r_mh_logo["story"], "anchor": 0, "focus": 99}},
-        {"command": "type.char", "params": {"attrs": {
-            "fontFamily": "DB Rasrand Bold",
-            "fontStyle": "Bold",
-            "size": 28.0,
-            "leading": {"kind": "points", "value": 29.0},
-            "fill": "[Black]",
-            "fillTint": 1.0,
-        }}},
-        {"command": "type.para", "params": {"attrs": {"align": "center", "firstLineIndent": 0.0, "hyphenate": False, "gridAlign": "none"}}},
+        {"command": "file.place", "params": {"frame": r_mh_logo["id"], "path": str(logo_img_path)}},
+        {"command": "object.fit", "params": {"ids": [r_mh_logo["id"]], "mode": "fitProportionally"}},
+        {"command": "object.stroke", "params": {"ids": [r_mh_logo["id"]], "swatch": "[None]", "weight": 0.0, "tint": 0.0}},
     ])
 
     pnum_w = cm(1.4)
@@ -661,13 +705,54 @@ def build_aditya_bharat_page5_edit():
         {"command": "type.para", "params": {"attrs": {"align": "right", "firstLineIndent": 0.0, "hyphenate": False, "gridAlign": "none"}}},
     ])
 
+    import datetime as _dt
+    ed_code = os.environ.get("AB_EDITION", "RAIPUR").strip().upper()
+    city_map = {
+        "RAIPUR": "रायपुर",
+        "NEW_DELHI": "नई दिल्ली",
+        "BILASPUR": "बिलासपुर",
+        "BHOPAL": "भोपाल",
+        "JAIPUR": "जयपुर",
+        "INDORE": "इंदौर",
+        "RAJNANDGAON": "राजनांदगांव",
+    }
+    city_hi = city_map.get(ed_code, "रायपुर")
+    date_env = os.environ.get("AB_EDITION_DATE", "19-11-2026").strip()
+    try:
+        dt_obj = _dt.datetime.strptime(date_env, "%d-%m-%Y").date()
+    except Exception:
+        dt_obj = _dt.date(2026, 11, 19)
+    hi_weekdays = ["सोमवार", "मंगलवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार", "रविवार"]
+    hi_months = {
+        1: "जनवरी", 2: "फरवरी", 3: "मार्च", 4: "अप्रैल", 5: "मई", 6: "जून",
+        7: "जुलाई", 8: "अगस्त", 9: "सितंबर", 10: "अक्टूबर", 11: "नवंबर", 12: "दिसंबर",
+    }
+    dynamic_dateline = f"{city_hi}, {hi_weekdays[dt_obj.weekday()]}, {dt_obj.day} {hi_months[dt_obj.month]} {dt_obj.year}  |"
+
+    p4_data = {}
+    p4_json_env = os.environ.get("AB_P4_JSON_PATH", "").strip()
+    if p4_json_env and Path(p4_json_env).exists():
+        try:
+            p4_data = json.loads(Path(p4_json_env).read_text(encoding="utf-8"))
+        except Exception:
+            p4_data = {}
+    else:
+        cand_json = VAULT_DIR / "daily_harvester_cache" / f"{date_env}_SAMPADAKIYA_PAGE4_ARTICLES.json"
+        if cand_json.exists():
+            try:
+                p4_data = json.loads(cand_json.read_text(encoding="utf-8"))
+            except Exception:
+                p4_data = {}
+    if p4_data.get("dateline_override"):
+        dynamic_dateline = p4_data["dateline_override"]
+
     dt_x0 = round(logo_x1 + cm(0.4), 2)
     dt_x1 = round(pnum_x0 - cm(0.2), 2)
     r_mh_dt = cmd("frame.create", {
         "spread": 0,
         "rect": [dt_x0, sec_y0, dt_x1, sec_y1],
         "content": "text",
-        "text": "इंदौर, मंगलवार, 20 अक्टूबर 2026  |",
+        "text": dynamic_dateline,
     })
     batch([
         {"command": "object.textFrameOptions", "params": {"ids": [r_mh_dt["id"]], "columns": 1, "verticalJustification": "center"}},
@@ -693,7 +778,7 @@ def build_aditya_bharat_page5_edit():
     l_cur_y = grid.content_y0
 
     # --- A1: Top Main Editorial (>= 30.0 pt DB Rasrand Bold, 100% Black) ---
-    edit1_head = "ग्रामीण अर्थव्यवस्था को\nनई रफ्तार देने का समय"
+    edit1_head = p4_data.get("edit1_head") or "ग्रामीण अर्थव्यवस्था को\nनई रफ्तार देने का समय"
     _, _, ed1_h_pt, ed1_hh = place_edit_page_headline_with_whitespace(
         0, lx0, l_cur_y, lx1,
         raw_text=edit1_head,
@@ -707,7 +792,7 @@ def build_aditya_bharat_page5_edit():
     ed1_body_y0 = round(l_cur_y + ed1_hh + 1.0, 2)
     ed1_body_y1 = snap_frame_bottom_to_baseline(cm(16.85))
 
-    edit1_raw = (
+    edit1_raw = p4_data.get("edit1_body") or (
         "संतुलित और समावेशी आर्थिक विकास की असली कसौटी यही है कि देश के गांवों, कस्बों और अन्नदाताओं की झोली में "
         "समृद्धि की कितनी किरणें पहुंचती हैं। हाल के वर्षों में बुनियादी ढांचे, राजमार्गों और डिजिटल भुगतान के विस्तार ने "
         "ग्रामीण भारत की आकांक्षाओं को एक नया आकाश दिया है, परंतु कृषि उपज के उचित मूल्य और स्थानीय स्तर पर रोजगार "
@@ -750,7 +835,7 @@ def build_aditya_bharat_page5_edit():
         "spread": 0,
         "rect": [lx0, jm_y0, lx1, jm_hdr_y1],
         "content": "text",
-        "text": "जीवन मंत्र  •  आत्मचिंतन एवं प्रेरणा",
+        "text": p4_data.get("jm_header") or "जीवन मंत्र  •  आत्मचिंतन एवं प्रेरणा",
     })
     batch([
         {"command": "object.fill", "params": {"ids": [r_jm_hdr["id"]], "swatch": "FlyerCrimson", "tint": 1.0}},
@@ -774,7 +859,7 @@ def build_aditya_bharat_page5_edit():
     ])
 
     jm_head_y0 = round(jm_hdr_y1 + 4.0, 2)
-    jm_head = "धैर्य और आत्मबल से ही\nछंटता है संघर्षों का अंधकार"
+    jm_head = p4_data.get("jm_head") or "धैर्य और आत्मबल से ही\nछंटता है संघर्षों का अंधकार"
     _, _, jm_h_pt, jm_hh = place_edit_page_headline_with_whitespace(
         0, lx0, jm_head_y0, lx1,
         raw_text=jm_head,
@@ -801,7 +886,7 @@ def build_aditya_bharat_page5_edit():
         "columnRule": False,
     })
 
-    jm_raw = (
+    jm_raw = p4_data.get("jm_body") or (
         "जीवन की यात्रा केवल फूलों की सेज नहीं है, बल्कि यह उन अनगिनत उतार-चढ़ावों की पाठशाला है जहां हर चुनौती "
         "मनुष्य के भीतर छिपे सामर्थ्य को तराशने आती है। अक्सर हम बाहरी परिस्थितियों के प्रतिकूल होते ही विचलित हो "
         "उठते हैं और अपने लक्ष्य से भटकने लगते हैं, जबकि इतिहास साक्षी है कि महान उपलब्धियां उन्हीं के हिस्से में "
@@ -826,7 +911,8 @@ def build_aditya_bharat_page5_edit():
     jm_target_bot_wrap = snap_top_lines_bottom(jm_body_y0, num_blocked_lines=17)
     jm_bot_off = max(1.5, round(jm_target_bot_wrap - jm_illus_y1, 2))
 
-    jm_illus_path = prepare_cmyk_edit_photo("p4_jeevan_mantra_illus.jpg", "ab_p5_jm_cmyk.jpg", jm_illus_w, jm_illus_h)
+    jm_illus_src = p4_data.get("jm_illus") or "p4_jeevan_mantra_illus.jpg"
+    jm_illus_path = prepare_cmyk_edit_photo(jm_illus_src, "ab_p5_jm_cmyk.jpg", jm_illus_w, jm_illus_h)
     r_jm_illus = cmd("frame.create", {
         "spread": 0,
         "rect": [jm_illus_x0, jm_illus_y0, jm_illus_x1, jm_illus_y1],
@@ -846,7 +932,7 @@ def build_aditya_bharat_page5_edit():
     cmd("object.stroke", {"ids": [r_jm_rule["id"]], "swatch": "ClosingGray", "weight": 2.0, "tint": 1.0})
 
     ed3_y0 = round(jm_rule_y + mm(3.5), 2)
-    ed3_head = "नागरिक अनुशासन से ही\nसंवरेगा शहरों का भविष्य"
+    ed3_head = p4_data.get("ed3_head") or "नागरिक अनुशासन से ही\nसंवरेगा शहरों का भविष्य"
     _, _, ed3_h_pt, ed3_hh = place_edit_page_headline_with_whitespace(
         0, lx0, ed3_y0, lx1,
         raw_text=ed3_head,
@@ -864,7 +950,7 @@ def build_aditya_bharat_page5_edit():
     nishkarsh_y0 = round(nishkarsh_y1 - nishkarsh_h, 2)
     ed3_body_y1 = snap_frame_bottom_to_baseline(round(nishkarsh_y0 - mm(3.5), 2))
 
-    ed3_raw = (
+    ed3_raw = p4_data.get("ed3_body") or (
         "आधुनिक महानगरों में फ्लाईओवर, मेट्रो और स्मार्ट लाइटिंग का जाल बिछाना जितना जरूरी है, उतना ही आवश्यक है "
         "सार्वजनिक संपत्ति और पर्यावरण के प्रति नागरिकों की अपनी जिम्मेदारी का बोध। केवल सरकारी अभियानों या जुर्माने "
         "के डर से कोई भी शहर लंबे समय तक स्वच्छ और सुव्यवस्थित नहीं रह सकता।\n"
@@ -892,7 +978,7 @@ def build_aditya_bharat_page5_edit():
     r_nish_rule = cmd("line.create", {"spread": 0, "a": [lx0, nish_rule_y], "b": [lx1, nish_rule_y]})
     cmd("object.stroke", {"ids": [r_nish_rule["id"]], "swatch": "[Black]", "weight": 1.5, "tint": 0.75})
 
-    nish_text = (
+    nish_text = p4_data.get("nishkarsh") or (
         "निष्कर्ष : नीतिगत सुधारों की सार्थकता तभी सिद्ध होती है जब शासन की संवेदनशीलता "
         "और नागरिकों का कर्तव्य-बोध मिलकर राष्ट्र निर्माण की धुरी बनें।"
     )
@@ -1001,8 +1087,10 @@ def build_aditya_bharat_page5_edit():
 
     shlok_box_y0 = round(title_y1 + 1.5, 2)
     shlok_box_y1 = round(shlok_box_y0 + cm(2.15), 2)
-    sanskrit_shlok = "“कर्मण्येवाधिकारस्ते मा फलेषु कदाचन। मा कर्मफलहेतुर्भूर्मा ते सङ्गोऽस्त्वकर्मणि॥”\n"
-    hindi_arth = (
+    sanskrit_shlok = p4_data.get("geeta_shlok") or "“कर्मण्येवाधिकारस्ते मा फलेषु कदाचन। मा कर्मफलहेतुर्भूर्मा ते सङ्गोऽस्त्वकर्मणि॥”\n"
+    if not sanskrit_shlok.endswith("\n"):
+        sanskrit_shlok += "\n"
+    hindi_arth = p4_data.get("geeta_arth") or (
         "अर्थ : मनुष्य का अधिकार केवल कर्म करने में है, उसके फल में कदापि नहीं। इसलिए फल की आसक्ति "
         "छोड़कर अपने कर्तव्य-कर्म का निष्ठापूर्वक पालन करना ही सच्चा जीवन-धर्म है।"
     )
@@ -1072,7 +1160,7 @@ def build_aditya_bharat_page5_edit():
     # --- LAYER 1: 3-COLUMN LEAD OPINION ARTICLE ---
     r_cur_y = round(geeta_rule_y + mm(2.5), 2)
 
-    lead_subhead = "विशेष मंथन  •  वैश्विक अनिश्चितता के दौर में भारत की तकनीकी छलांग"
+    lead_subhead = p4_data.get("lead_subhead") or "विशेष मंथन  •  वैश्विक अनिश्चितता के दौर में भारत की तकनीकी छलांग"
     _, _, _, l_sub_h = place_edit_page_headline_with_whitespace(
         0, rx0, r_cur_y, rx1,
         raw_text=lead_subhead,
@@ -1085,7 +1173,7 @@ def build_aditya_bharat_page5_edit():
     )
     r_cur_y = round(r_cur_y + l_sub_h + 0.5, 2)
 
-    lead_headline = "डिजिटल नवाचार और हरित उद्योग से\nबनेगा विकसित भारत का नया मॉडल"
+    lead_headline = p4_data.get("lead_headline") or "डिजिटल नवाचार और हरित उद्योग से\nबनेगा विकसित भारत का नया मॉडल"
     _, _, lead_h_pt, lead_hh = place_edit_page_headline_with_whitespace(
         0, rx0, r_cur_y, rx1,
         raw_text=lead_headline,
@@ -1127,7 +1215,8 @@ def build_aditya_bharat_page5_edit():
     auth_wrap_target_y1 = snap_top_lines_bottom(lead_body_y0, num_blocked_lines=8)
     auth_bot_off = max(2.0, round(auth_wrap_target_y1 - auth_y1, 2))
 
-    auth_img_path = prepare_cmyk_edit_photo("p4_author_photo.jpg", "ab_p5_author_cmyk.jpg", auth_w, auth_h, crop_mode="cover")
+    auth_photo_src = p4_data.get("lead_author_photo") or "p4_author_photo.jpg"
+    auth_img_path = prepare_cmyk_edit_photo(auth_photo_src, "ab_p5_author_cmyk.jpg", auth_w, auth_h, crop_mode="cover")
     r_auth_ph = cmd("frame.create", {
         "spread": 0,
         "rect": [auth_x0, auth_y0, auth_x1, auth_y1],
@@ -1144,8 +1233,8 @@ def build_aditya_bharat_page5_edit():
     by_x1 = r_col1_x1
     by_y0 = auth_y0
     by_y1 = auth_y1
-    auth_name_line = "डॉ. राजीव रंजन\n"
-    auth_desig_line = "वरिष्ठ आर्थिक एवं\nनीति विश्लेषक,\nनई दिल्ली"
+    auth_name_line = (p4_data.get("lead_author_name") or "डॉ. राजीव रंजन").strip() + "\n"
+    auth_desig_line = p4_data.get("lead_author_desig") or "वरिष्ठ आर्थिक एवं\nनीति विश्लेषक,\nनई दिल्ली"
     auth_full_txt = auth_name_line + auth_desig_line
     name_b = len(auth_name_line.encode("utf-8"))
 
@@ -1203,8 +1292,9 @@ def build_aditya_bharat_page5_edit():
     l_target_wrap_y1 = snap_top_lines_bottom(lead_body_y0, num_blocked_lines=21)
     l_cap_bot_off = max(2.0, round(l_target_wrap_y1 - l_cap_y1, 2))
 
+    lead_illus_src = p4_data.get("lead_illus") or "p4_lead_illus.jpg"
     lead_illus_path = prepare_cmyk_edit_photo(
-        "p4_lead_illus.jpg",
+        lead_illus_src,
         "ab_p5_lead_illus_cmyk.jpg",
         l_illus_x1 - l_illus_x0,
         l_illus_y1 - l_illus_y0,
@@ -1223,11 +1313,12 @@ def build_aditya_bharat_page5_edit():
         {"command": "object.textWrap", "params": {"ids": [r_lead_illus["id"]], "mode": "boundingBox", "offset": [0.0, 0.0, 2.0, 0.0]}},
     ])
 
+    lead_cap_txt = p4_data.get("lead_caption") or "तकनीकी आत्मनिर्भरता और औद्योगिक प्रगति के संगम से उभरती नई भारतीय अर्थव्यवस्था। — इलस्ट्रेशन"
     r_lead_cap = cmd("frame.create", {
         "spread": 0,
         "rect": [l_illus_x0, l_cap_y0, l_illus_x1, l_cap_y1],
         "content": "text",
-        "text": "तकनीकी आत्मनिर्भरता और औद्योगिक प्रगति के संगम से उभरती नई भारतीय अर्थव्यवस्था। — इलस्ट्रेशन",
+        "text": lead_cap_txt,
     })
     batch([
         {"command": "object.textFrameOptions", "params": {"ids": [r_lead_cap["id"]], "columns": 1, "verticalJustification": "top"}},
@@ -1240,12 +1331,12 @@ def build_aditya_bharat_page5_edit():
         {"command": "type.para", "params": {"attrs": {"align": "left", "firstLineIndent": 0.0, "hyphenate": False}}},
     ])
 
-    lead_8line_intro = (
+    lead_8line_intro = p4_data.get("lead_intro") or (
         "इक्कीसवीं सदी के तीसरे दशक में जब वैश्विक आपूर्ति श्रृंखलाएं और पारंपरिक आर्थिक शक्तियां गहरे "
         "बदलाव के दौर से गुजर रही हैं, तब भारत के सामने डिजिटल पब्लिक इंफ्रास्ट्रक्चर, सेमीकंडक्टर विनिर्माण और "
         "हरित ऊर्जा के बल पर विश्व का नया विकास इंजन बनने का ऐतिहासिक अवसर उपस्थित है।"
     )
-    lead_body_copy = (
+    lead_body_copy = p4_data.get("lead_body") or (
         "बीते एक दशक में भारत ने जिस गति से डिजिटल पहचान, तात्कालिक भुगतान प्रणाली और डेटा सशक्तिकरण का लोकतांत्रिक "
         "ढांचा खड़ा किया है, उसने पूरी दुनिया के अर्थशास्त्रियों को चकित किया है। आज गांव के छोटे दुकानदार से लेकर "
         "महानगर के बड़े उद्यमी तक एक ही डिजिटल राजमार्ग से जुड़े हैं। किंतु केवल सेवा क्षेत्र और उपभोक्ता बाजार के "
@@ -1373,11 +1464,11 @@ def build_aditya_bharat_page5_edit():
 
     m1_pt = build_equal_middle_article(
         mid_l_x0, mid_l_x1, l2_y0, l2_y1,
-        subhead_str="पर्यावरण सरोकार  •  प्रकृति और शहरीकरण",
-        headline_str="शहरों में हरित क्षेत्रों और\nजल स्रोतों को बचाने की पहल",
-        intro_str="शहरी विकास की दौड़ में यदि झीलों, तालाबों और हरित पट्टियों की अनदेखी हुई तो जलवायु संकट गहराएगा।",
-        byline_str="पंकज चतुर्वेदी | पर्यावरण चिंतक",
-        body_str=(
+        subhead_str=p4_data.get("mid_left_subhead") or "पर्यावरण सरोकार  •  प्रकृति और शहरीकरण",
+        headline_str=p4_data.get("mid_left_headline") or "शहरों में हरित क्षेत्रों और\nजल स्रोतों को बचाने की पहल",
+        intro_str=p4_data.get("mid_left_intro") or "शहरी विकास की दौड़ में यदि झीलों, तालाबों और हरित पट्टियों की अनदेखी हुई तो जलवायु संकट गहराएगा।",
+        byline_str=p4_data.get("mid_left_byline") or "पंकज चतुर्वेदी | पर्यावरण चिंतक",
+        body_str=p4_data.get("mid_left_body") or (
             "देश के छोटे-बड़े शहरों में जिस तेजी से कंक्रीट के जंगल फैल रहे हैं, उसने स्थानीय पारिस्थितिकी तंत्र के "
             "सामने गंभीर प्रश्न खड़े कर दिए हैं। दो दशक पहले तक प्रत्येक नगर के चारों ओर पारंपरिक तालाबों, बाग-बगीचों "
             "और बरसाती नालों की एक प्राकृतिक श्रृंखला हुआ करती थी, जो मानसून के अतिरिक्त जल को सोखकर भूजल स्तर "
@@ -1386,17 +1477,17 @@ def build_aditya_bharat_page5_edit():
             "में पेयजल का संकट खड़ा हो जाता है। आधुनिक टाउन प्लानिंग में स्पंज सिटी और अर्बन फॉरेस्ट की अवधारणा को "
             "अनिवार्य रूप से लागू करना होगा ताकि विकास और प्रकृति एक-दूसरे के पूरक बन सकें।"
         ),
-        illus_src="p4_mid_left_illus.jpg",
+        illus_src=p4_data.get("mid_left_illus") or "p4_mid_left_illus.jpg",
         illus_dst="ab_p5_mid_left_cmyk.jpg",
     )
 
     m2_pt = build_equal_middle_article(
         mid_r_x0, mid_r_x1, l2_y0, l2_y1,
-        subhead_str="शिक्षा एवं भविष्य  •  बदलते कौशल के आयाम",
-        headline_str="एआई के दौर में रचनात्मक\nसोच जगाए हमारी शिक्षा",
-        intro_str="नई राष्ट्रीय शिक्षा नीति के तहत स्कूलों और कॉलेजों में शोध, तर्कशक्ति और मानवीय मूल्यों का संगम आवश्यक है।",
-        byline_str="प्रो. मीनाक्षी सुंदरम | शिक्षाविद",
-        body_str=(
+        subhead_str=p4_data.get("mid_right_subhead") or "शिक्षा एवं भविष्य  •  बदलते कौशल के आयाम",
+        headline_str=p4_data.get("mid_right_headline") or "एआई के दौर में रचनात्मक\nसोच जगाए हमारी शिक्षा",
+        intro_str=p4_data.get("mid_right_intro") or "नई राष्ट्रीय शिक्षा नीति के तहत स्कूलों और कॉलेजों में शोध, तर्कशक्ति और मानवीय मूल्यों का संगम आवश्यक है।",
+        byline_str=p4_data.get("mid_right_byline") or "प्रो. मीनाक्षी सुंदरम | शिक्षाविद",
+        body_str=p4_data.get("mid_right_body") or (
             "कृत्रिम बुद्धिमत्ता और स्वचालित तकनीक ने ज्ञान प्राप्त करने और कामकाज करने के पारंपरिक तरीकों को पूरी "
             "तरह बदल दिया है। जब सूचनाओं का विशाल भंडार एक क्लिक पर उपलब्ध हो, तब परीक्षाओं में केवल तथ्यों को "
             "याद रखने की क्षमता पर्याप्त नहीं रह जाती। आज के विद्यार्थियों को प्रश्न पूछने, समस्याओं का मौलिक समाधान "
@@ -1405,7 +1496,7 @@ def build_aditya_bharat_page5_edit():
             "प्रतिभाशाली छात्रों के लिए नए द्वार खोले हैं। यदि हमारे शिक्षण संस्थान पुस्तकीय ज्ञान के साथ प्रायोगिक "
             "कौशल और संवेदनशीलता को जोड़ें, तो भारत की युवा शक्ति विश्व का नेतृत्व करेगी।"
         ),
-        illus_src="p4_mid_right_illus.jpg",
+        illus_src=p4_data.get("mid_right_illus") or "p4_mid_right_illus.jpg",
         illus_dst="ab_p5_mid_right_cmyk.jpg",
     )
 
@@ -1455,23 +1546,34 @@ def build_aditya_bharat_page5_edit():
         {"command": "type.para", "params": {"attrs": {"align": "center", "hyphenate": False, "gridAlign": "none"}}},
     ])
 
-    literary_items = [
-        (
-            "१. आज का शेर\n",
-            "“सफ़र में धूप तो होगी जो चल सको तो चलो,\nसभी हैं भीड़ में तुम भी निकल सको तो चलो।”\n",
-            "अर्थ : जीवन पथ पर कठिनाइयां स्वाभाविक हैं; भीड़ का हिस्सा बनने के बजाय जो संघर्षों को स्वीकार कर आगे बढ़ता है, वही अपनी पहचान बनाता है।"
-        ),
-        (
-            "२. नज़्म की पंक्तियाँ\n",
-            "“अंधेरी रात के सीने में इक चराग़ जला,\nहवा के ज़ोर से लड़ने का हौसला तो मिला।”\n",
-            "अर्थ : विपरीत परिस्थितियों से घबराने के बजाय उम्मीद का एक छोटा प्रयास भी बड़े से बड़े संकट के सामने टिके रहने का आत्मबल जगाता है।"
-        ),
-        (
-            "३. ग़ज़ल का शेर\n",
-            "“कौन कहता है आसमां में सुराख़ नहीं हो सकता,\nएक पत्थर तो तबीयत से उछालो यारो।”\n",
-            "अर्थ : दुष्यंत कुमार की ये पंक्तियां संदेश देती हैं कि यदि पूरे संकल्प और निष्ठा से प्रयास किया जाए, तो असंभव दिखने वाला लक्ष्य भी साधा जा सकता है।"
-        ),
-    ]
+    raw_lit = p4_data.get("literary_items")
+    if raw_lit and len(raw_lit) == 3:
+        literary_items = [
+            (
+                (it[0] if it[0].endswith("\n") else it[0] + "\n"),
+                (it[1] if it[1].endswith("\n") else it[1] + "\n"),
+                it[2],
+            )
+            for it in raw_lit
+        ]
+    else:
+        literary_items = [
+            (
+                "१. आज का शेर\n",
+                "“सफ़र में धूप तो होगी जो चल सको तो चलो,\nसभी हैं भीड़ में तुम भी निकल सको तो चलो।”\n",
+                "अर्थ : जीवन पथ पर कठिनाइयां स्वाभाविक हैं; भीड़ का हिस्सा बनने के बजाय जो संघर्षों को स्वीकार कर आगे बढ़ता है, वही अपनी पहचान बनाता है।"
+            ),
+            (
+                "२. नज़्म की पंक्तियाँ\n",
+                "“अंधेरी रात के सीने में इक चराग़ जला,\nहवा के ज़ोर से लड़ने का हौसला तो मिला।”\n",
+                "अर्थ : विपरीत परिस्थितियों से घबराने के बजाय उम्मीद का एक छोटा प्रयास भी बड़े से बड़े संकट के सामने टिके रहने का आत्मबल जगाता है।"
+            ),
+            (
+                "३. ग़ज़ल का शेर\n",
+                "“कौन कहता है आसमां में सुराख़ नहीं हो सकता,\nएक पत्थर तो तबीयत से उछालो यारो।”\n",
+                "अर्थ : दुष्यंत कुमार की ये पंक्तियां संदेश देती हैं कि यदि पूरे संकल्प और निष्ठा से प्रयास किया जाए, तो असंभव दिखने वाला लक्ष्य भी साधा जा सकता है।"
+            ),
+        ]
 
     sh_avail_y0 = round(sh_hdr_y1 + 3.0, 2)
     sh_avail_h = l3_top_y1 - sh_avail_y0
@@ -1578,8 +1680,9 @@ def build_aditya_bharat_page5_edit():
     c_img_y0 = round(c_hdr_y1 + 3.0, 2)
     c_img_y1 = round(c_cap_y0 - 2.5, 2)
 
+    cartoon_src = p4_data.get("cartoon_photo") or "p4_cartoon_bw.jpg"
     cartoon_cropped = prepare_cmyk_edit_photo(
-        "p4_cartoon_bw.jpg",
+        cartoon_src,
         "ab_p5_cartoon_cmyk.jpg",
         c_img_x1 - c_img_x0,
         c_img_y1 - c_img_y0,
@@ -1597,7 +1700,7 @@ def build_aditya_bharat_page5_edit():
         {"command": "object.stroke", "params": {"ids": [r_c_img["id"]], "swatch": "[None]", "weight": 0.0, "tint": 0.0}},
     ])
 
-    cartoon_punchline = (
+    cartoon_punchline = p4_data.get("cartoon_punchline") or (
         "“भाई साहब, ऑनलाइन सेल के धमाकों से तो किसी तरह बच गए, "
         "मगर महंगाई के इस रॉकेट से आम आदमी के बजट की छतरी कैसे बचेगी!”"
     )
@@ -1637,7 +1740,7 @@ def build_aditya_bharat_page5_edit():
     rpc("app.save", {"path": str(out_pd)})
     rpc("app.export", {"path": str(out_png), "page": 0, "scale": 1.5})
     try:
-        rpc("app.export", {"path": str(out_pdf), "page": 0})
+        rpc("engine.execute", {"command": "file.exportPdf", "params": {"path": str(out_pdf)}})
     except Exception:
         pass
 

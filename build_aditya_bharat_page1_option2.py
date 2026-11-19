@@ -128,10 +128,62 @@ def rpc(method: str, params: dict = None):
     return resp.get("result")
 
 
+def draw_bottom_cmyk_press_marka():
+    import os
+    sp = int(os.environ.get("AB_TARGET_SPREAD", "0"))
+    rpc("engine.batch", {"commands": [
+        {"command": "swatch.create", "params": {"name": "PressCyan", "color": "#00aeef"}},
+        {"command": "swatch.create", "params": {"name": "PressMagenta", "color": "#ec008c"}},
+        {"command": "swatch.create", "params": {"name": "PressYellow", "color": "#fff200"}},
+    ]})
+
+    y0 = cm(52.10)
+    y1 = cm(52.42)
+    rule_y = round((y0 + y1) / 2.0, 2)
+
+    # 1. Draw the Full-Width 8-Column Bottom Gray Rule FIRST so it sits BEHIND the CMYK boxes
+    r_bot_rule = rpc("engine.execute", {
+        "command": "line.create",
+        "params": {"spread": sp, "a": [cm(1.0), rule_y], "b": [cm(33.0), rule_y]},
+    })
+    style_cmds = [
+        {"command": "object.stroke", "params": {"ids": [r_bot_rule["id"]], "swatch": "[Black]", "weight": 2.0, "tint": 0.60}},
+    ]
+
+    # 2. Place 4 CMYK Boxes (C, M, Y, K) at 3 Places (LEFT, CENTER, RIGHT) ON TOP of the Gray Rule
+    patches = [
+        ("PressCyan", 1.0),
+        ("PressMagenta", 1.0),
+        ("PressYellow", 1.0),
+        ("[Black]", 1.0),
+    ]
+    box_w = mm(4.0)
+    group_w = round(len(patches) * box_w, 2)
+    group_centers_x = [cm(3.5), cm(17.0), cm(30.5)]
+
+    for cx in group_centers_x:
+        bar_x0 = round(cx - group_w / 2.0, 2)
+        for i, (sw, tn) in enumerate(patches):
+            px0 = round(bar_x0 + i * box_w, 2)
+            px1 = round(px0 + box_w, 2)
+            rf = rpc("engine.execute", {"command": "frame.create", "params": {"spread": sp, "rect": [px0, y0, px1, y1], "content": "unassigned"}})
+            fid = rf["id"]
+            style_cmds.append({"command": "object.fill", "params": {"ids": [fid], "swatch": sw, "tint": tn}})
+            style_cmds.append({"command": "object.stroke", "params": {"ids": [fid], "swatch": "[Black]", "weight": 0.35, "tint": 0.85}})
+
+    if style_cmds:
+        rpc("engine.batch", {"commands": style_cmds})
+
+
 def cmd(command: str, params: dict = None):
     import os
     if command == "file.close" and (os.environ.get("AB_NO_CLOSE") == "1" or os.environ.get("AB_TARGET_SPREAD") is not None):
         return None
+    if command == "edit.deselectAll":
+        try:
+            draw_bottom_cmyk_press_marka()
+        except Exception:
+            pass
     p = dict(params or {})
     if os.environ.get("AB_TARGET_SPREAD") is not None and "spread" in p:
         p["spread"] = int(os.environ["AB_TARGET_SPREAD"])
@@ -924,57 +976,242 @@ def build_aditya_bharat_page1_option2():
     ])
 
     # ==========================================================================
-    # ZONE 1: 6.0 CM FRONT PAGE MASTHEAD SPACE (y = 1.0 .. 7.0 cm, Cols 1..8)
+    # ZONE 1: 6.0 CM RAIPUR EDITION DYNAMIC FRONT PAGE MASTHEAD (y = 1.0 .. 7.0 cm, Cols 1..8)
+    #   - Base Artwork: raipur_page1_masthead_base_no_ear.png (Left Emblem + 6 Editions + Center 'दैनिक आदित्य भारत' + Bottom Beige Bar)
+    #   - Right Ear-Panel (Dynamic Live Vector Frames):
+    #       1. RNI NO. - CHHHIN/2018/76773
+    #       2. वर्ष-{varsh} । अंक {ank} । मूल्य - 3 रुपए ।  (Daily Ank +1; after 365 issues, Varsh +1)
+    #       3. पृष्ठ-08 । नगर संस्करण
+    #       4. रायपुर
+    #       5. Multi-Color English Weekday (THURSDAY / WEDNESDAY / FRIDAY...)
+    #       6. Hindi Dateline (गुरुवार, 19 नवंबर, 2026)
     # ==========================================================================
+    import datetime, os
     mh_x0, mh_y0, mh_x1, mh_y1 = grid.print_x0, grid.masthead_y0, grid.print_x1, grid.masthead_y1
-    folio_h = cm(0.85)
-    folio_y0 = round(mh_y1 - folio_h, 2)
 
-    r_mh_title = cmd("frame.create", {
-        "spread": 0,
-        "rect": [mh_x0, mh_y0, mh_x1, folio_y0],
-        "content": "text",
-        "text": "आदित्य भारत",
-    })
+    edition_key = os.environ.get("AB_EDITION", "RAIPUR").strip().upper()
+    ed_date_str = os.environ.get("AB_EDITION_DATE", "19-11-2026").strip()
+    try:
+        dp = [int(x) for x in ed_date_str.split("-")]
+        dt = datetime.date(dp[0], dp[1], dp[2]) if dp[0] > 1900 else datetime.date(dp[2], dp[1], dp[0])
+    except Exception:
+        dt = datetime.date(2026, 11, 19)
+
+    ref_dt = datetime.date(2026, 11, 19)
+    delta_days = (dt - ref_dt).days
+
+    if edition_key in ("NEW_DELHI", "DELHI", "DEL"):
+        base_abs_issue = (2 - 1) * 365 + (13 - 1)
+        cur_abs_issue = max(0, base_abs_issue + delta_days)
+        varsh_num = (cur_abs_issue // 365) + 1
+        ank_num = (cur_abs_issue % 365) + 1
+        varsh_str = f"{varsh_num:02d}"
+        rni_or_prgi_str = "PRGI - DLHIN/25/A3662"
+        varsh_ank_line = f"वर्ष-{varsh_str}। अंक {ank_num}। मूल्य - 2 रुपए।"
+        pages_edition_line = "पृष्ठ-08। नगर संस्करण"
+        city_display_hi = "नई दिल्ली"
+        mh_img_path = VAULT_DIR / "photos" / "new_delhi_page1_masthead_base_no_ear.png"
+    elif edition_key in ("BILASPUR", "BSP"):
+        base_abs_issue = (3 - 1) * 365 + (329 - 1)
+        cur_abs_issue = max(0, base_abs_issue + delta_days)
+        varsh_num = (cur_abs_issue // 365) + 1
+        ank_num = (cur_abs_issue % 365) + 1
+        varsh_str = f"{varsh_num:02d}"
+        rni_or_prgi_str = "PRGI No. - CTHIN/25/A1423"
+        varsh_ank_line = f"वर्ष-{varsh_str} । अंक {ank_num} । मूल्य - 2 रुपए।"
+        pages_edition_line = "पृष्ठ-08 । नगर संस्करण"
+        city_display_hi = "बिलासपुर"
+        mh_img_path = VAULT_DIR / "photos" / "bilaspur_page1_masthead_base_no_ear.png"
+    elif edition_key in ("BHOPAL", "BPL"):
+        base_abs_issue = (10 - 1) * 365 + (222 - 1)
+        cur_abs_issue = max(0, base_abs_issue + delta_days)
+        varsh_num = (cur_abs_issue // 365) + 1
+        ank_num = (cur_abs_issue % 365) + 1
+        rni_or_prgi_str = "RNI NO. - MPHIN/2015/63660"
+        varsh_ank_line = f"वर्ष-{varsh_num} । अंक {ank_num} । मूल्य - 2 रुपए।"
+        pages_edition_line = "पृष्ठ-08 । नगर संस्करण"
+        city_display_hi = "भोपाल"
+        mh_img_path = VAULT_DIR / "photos" / "bhopal_page1_masthead_base_no_ear.png"
+    elif edition_key in ("JAIPUR", "JPR"):
+        base_abs_issue = (1 - 1) * 365 + (98 - 1)
+        cur_abs_issue = max(0, base_abs_issue + delta_days)
+        varsh_num = (cur_abs_issue // 365) + 1
+        ank_num = (cur_abs_issue % 365) + 1
+        varsh_str = f"{varsh_num:02d}"
+        rni_or_prgi_str = "RJHIN/26/A6072"
+        varsh_ank_line = f"वर्ष-{varsh_str} । अंक {ank_num} । मूल्य - 2 रुपए।"
+        pages_edition_line = "पृष्ठ-08 । नगर संस्करण"
+        city_display_hi = "जयपुर"
+        mh_img_path = VAULT_DIR / "photos" / "jaipur_page1_masthead_base_no_ear.png"
+    elif edition_key in ("INDORE", "IND"):
+        base_abs_issue = (12 - 1) * 365 + (315 - 1)
+        cur_abs_issue = max(0, base_abs_issue + delta_days)
+        varsh_num = (cur_abs_issue // 365) + 1
+        ank_num = (cur_abs_issue % 365) + 1
+        rni_or_prgi_str = "RNI NO. - MPHIN/2014/56594"
+        varsh_ank_line = f"वर्ष-{varsh_num} । अंक {ank_num} । मूल्य - 2 रुपए ।"
+        pages_edition_line = "पृष्ठ-08 । नगर संस्करण"
+        city_display_hi = "इंदौर"
+        mh_img_path = VAULT_DIR / "photos" / "indore_page1_masthead_base_no_ear.png"
+    elif edition_key in ("RAJNANDGAON", "RJN"):
+        base_abs_issue = (4 - 1) * 365 + (341 - 1)
+        cur_abs_issue = max(0, base_abs_issue + delta_days)
+        varsh_num = (cur_abs_issue // 365) + 1
+        ank_num = (cur_abs_issue % 365) + 1
+        varsh_str = f"{varsh_num:02d}"
+        rni_or_prgi_str = "PRGI - CTHIN/25/A4799"
+        varsh_ank_line = f"वर्ष-{varsh_str} । अंक {ank_num} । मूल्य - 2 रुपए।"
+        pages_edition_line = "पृष्ठ-08 । नगर संस्करण"
+        city_display_hi = "राजनांदगांव"
+        mh_img_path = VAULT_DIR / "photos" / "rajnandgaon_page1_masthead_base_no_ear.png"
+    else:
+        base_abs_issue = (10 - 1) * 365 + (130 - 1)
+        cur_abs_issue = max(0, base_abs_issue + delta_days)
+        varsh_num = (cur_abs_issue // 365) + 1
+        ank_num = (cur_abs_issue % 365) + 1
+        rni_or_prgi_str = "RNI NO. - CHHHIN/2018/76773"
+        varsh_ank_line = f"वर्ष-{varsh_num} । अंक {ank_num} । मूल्य - 3 रुपए ।"
+        pages_edition_line = "पृष्ठ-08 । नगर संस्करण"
+        city_display_hi = "रायपुर"
+        mh_img_path = VAULT_DIR / "photos" / "raipur_page1_masthead_base_no_ear.png"
+
+    hi_weekdays = ["सोमवार", "मंगलवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार", "रविवार"]
+    eng_weekdays = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"]
+    hi_months = {
+        1: "जनवरी", 2: "फरवरी", 3: "मार्च", 4: "अप्रैल", 5: "मई", 6: "जून",
+        7: "जुलाई", 8: "अगस्त", 9: "सितंबर", 10: "अक्टूबर", 11: "नवंबर", 12: "दिसंबर",
+    }
+    eng_day_str = eng_weekdays[dt.weekday()]
+    hi_date_str = f"{hi_weekdays[dt.weekday()]}, {dt.day} {hi_months[dt.month]}, {dt.year}"
+
     batch([
-        {"command": "object.textFrameOptions", "params": {"ids": [r_mh_title["id"]], "columns": 1, "verticalJustification": "center"}},
-        {"command": "text.select", "params": {"story": r_mh_title["story"], "anchor": 0, "focus": 999}},
-        {"command": "type.char", "params": {"attrs": {
-            "fontFamily": "DB Rasrand Bold",
-            "fontStyle": "Bold",
-            "size": 92.0,
-            "leading": {"kind": "points", "value": 93.0},
-            "fill": "FlyerCrimson",
-            "fillTint": 1.0,
-        }}},
-        {"command": "type.para", "params": {"attrs": {"align": "center", "firstLineIndent": 0.0, "hyphenate": False}}},
+        {"command": "swatch.create", "params": {"name": "EarOrange", "color": "#f37021"}},
+        {"command": "swatch.create", "params": {"name": "EarRed", "color": "#d71920"}},
+        {"command": "swatch.create", "params": {"name": "EarBlue", "color": "#1c3f94"}},
+        {"command": "swatch.create", "params": {"name": "EarCyan", "color": "#00aeef"}},
     ])
 
-    r_mh_line1 = cmd("line.create", {"spread": 0, "a": [mh_x0, folio_y0], "b": [mh_x1, folio_y0]})
-    r_mh_line2 = cmd("line.create", {"spread": 0, "a": [mh_x0, mh_y1], "b": [mh_x1, mh_y1]})
-    batch([
-        {"command": "object.stroke", "params": {"ids": [r_mh_line1["id"]], "swatch": "[Black]", "weight": 0.75, "tint": 1.0}},
-        {"command": "object.stroke", "params": {"ids": [r_mh_line2["id"]], "swatch": "[Black]", "weight": 1.5, "tint": 1.0}},
-    ])
-
-    r_folio = cmd("frame.create", {
+    r_mh_bg = cmd("frame.create", {
         "spread": 0,
-        "rect": [mh_x0, folio_y0, mh_x1, mh_y1],
-        "content": "text",
-        "text": "इंदौर, भोपाल, रायपुर, अहमदाबाद और नई दिल्ली से एक साथ प्रकाशित   |   मंगलवार, 20 अक्टूबर 2026   |   पृष्ठ : 08   |   मूल्य : रु. 5.00",
+        "rect": [mh_x0, mh_y0, mh_x1, round(mh_y0 + cm(5.80), 2)],
+        "content": "graphic",
     })
     batch([
-        {"command": "object.textFrameOptions", "params": {"ids": [r_folio["id"]], "columns": 1, "verticalJustification": "center"}},
-        {"command": "text.select", "params": {"story": r_folio["story"], "anchor": 0, "focus": 999}},
+        {"command": "file.place", "params": {"frame": r_mh_bg["id"], "path": str(mh_img_path)}},
+        {"command": "object.fit", "params": {"ids": [r_mh_bg["id"]], "mode": "fitProportionally"}},
+        {"command": "object.stroke", "params": {"ids": [r_mh_bg["id"]], "swatch": "[None]", "weight": 0.0, "tint": 0.0}},
+    ])
+
+    # Right Ear-Panel Coordinates (x = 28.25 .. 33.00 cm)
+    ear_x0 = round(mh_x0 + cm(27.25), 2)
+    ear_x1 = mh_x1
+
+    # 1. Top 3 Metadata Lines (RNI/PRGI + Varsh/Ank/Price + Pages/Edition)
+    top3_txt = f"{rni_or_prgi_str}\n{varsh_ank_line}\n{pages_edition_line}"
+    r_ear_top = cmd("frame.create", {
+        "spread": 0,
+        "rect": [ear_x0, round(mh_y0 + cm(0.75), 2), ear_x1, round(mh_y0 + cm(2.15), 2)],
+        "content": "text",
+        "text": top3_txt,
+    })
+    rni_b = len(rni_or_prgi_str.encode("utf-8"))
+    batch([
+        {"command": "object.textFrameOptions", "params": {"ids": [r_ear_top["id"]], "columns": 1, "verticalJustification": "center"}},
+        {"command": "text.select", "params": {"story": r_ear_top["story"], "anchor": 0, "focus": 999}},
         {"command": "type.char", "params": {"attrs": {
             "fontFamily": "DB Hindi",
             "fontStyle": "Bold",
-            "size": 10.5,
-            "leading": {"kind": "points", "value": 11.5},
+            "size": 10.0,
+            "leading": {"kind": "points", "value": 11.8},
             "fill": "[Black]",
-            "fillTint": 1.0,
         }}},
-        {"command": "type.para", "params": {"attrs": {"align": "center", "firstLineIndent": 0.0, "hyphenate": False}}},
+        {"command": "type.para", "params": {"attrs": {"align": "center", "firstLineIndent": 0.0, "hyphenate": False, "gridAlign": "none"}}},
+        {"command": "text.select", "params": {"story": r_ear_top["story"], "anchor": 0, "focus": rni_b}},
+        {"command": "type.char", "params": {"attrs": {
+            "fontFamily": "Arial",
+            "fontStyle": "Bold",
+            "size": 8.2,
+            "leading": {"kind": "points", "value": 11.2},
+            "fill": "[Black]",
+        }}},
+    ])
+
+    # 2. Edition City Name ('रायपुर' or 'नई दिल्ली')
+    r_ear_city = cmd("frame.create", {
+        "spread": 0,
+        "rect": [ear_x0, round(mh_y0 + cm(2.15), 2), ear_x1, round(mh_y0 + cm(3.45), 2)],
+        "content": "text",
+        "text": city_display_hi,
+    })
+    city_pt = 21.5 if len(city_display_hi) >= 8 else 28.0
+    batch([
+        {"command": "object.textFrameOptions", "params": {"ids": [r_ear_city["id"]], "columns": 1, "verticalJustification": "center"}},
+        {"command": "text.select", "params": {"story": r_ear_city["story"], "anchor": 0, "focus": 99}},
+        {"command": "type.char", "params": {"attrs": {
+            "fontFamily": "DB Hindi",
+            "fontStyle": "Bold",
+            "size": city_pt,
+            "leading": {"kind": "points", "value": round(city_pt + 1.0, 2)},
+            "fill": "[Black]",
+        }}},
+        {"command": "type.para", "params": {"attrs": {"align": "center", "firstLineIndent": 0.0, "hyphenate": False, "gridAlign": "none"}}},
+    ])
+
+    # 3. Multi-Color English Weekday ('THURSDAY' / 'WEDNESDAY'...)
+    r_ear_eng = cmd("frame.create", {
+        "spread": 0,
+        "rect": [ear_x0, round(mh_y0 + cm(3.45), 2), ear_x1, round(mh_y0 + cm(4.32), 2)],
+        "content": "text",
+        "text": eng_day_str,
+    })
+    eng_cmds = [
+        {"command": "object.textFrameOptions", "params": {"ids": [r_ear_eng["id"]], "columns": 1, "verticalJustification": "center"}},
+        {"command": "text.select", "params": {"story": r_ear_eng["story"], "anchor": 0, "focus": 99}},
+        {"command": "type.char", "params": {"attrs": {
+            "fontFamily": "Arial",
+            "fontStyle": "Bold",
+            "size": 16.5,
+            "leading": {"kind": "points", "value": 17.5},
+            "tracking": 35.0,
+            "fill": "[Black]",
+        }}},
+        {"command": "type.para", "params": {"attrs": {"align": "center", "firstLineIndent": 0.0, "hyphenate": False, "gridAlign": "none"}}},
+    ]
+    pair_swatches = ["EarOrange", "EarRed", "EarBlue", "EarCyan", "EarOrange", "[Black]"]
+    for idx_ch in range(len(eng_day_str)):
+        sw_c = pair_swatches[min(idx_ch // 2, len(pair_swatches) - 1)]
+        if idx_ch == 1:
+            sw_c = "EarRed"
+        elif idx_ch in (2, 3):
+            sw_c = "EarBlue"
+        elif idx_ch in (4, 5):
+            sw_c = "EarCyan" if idx_ch == 4 else "EarOrange"
+        elif idx_ch >= 6:
+            sw_c = "[Black]" if idx_ch == len(eng_day_str) - 1 else "EarRed"
+        eng_cmds.extend([
+            {"command": "text.select", "params": {"story": r_ear_eng["story"], "anchor": idx_ch, "focus": idx_ch + 1}},
+            {"command": "type.char", "params": {"attrs": {"fill": sw_c, "fillTint": 1.0}}},
+        ])
+    batch(eng_cmds)
+
+    # 4. Hindi Dateline ('गुरुवार, 19 नवंबर, 2026')
+    r_ear_hi = cmd("frame.create", {
+        "spread": 0,
+        "rect": [ear_x0, round(mh_y0 + cm(4.32), 2), ear_x1, round(mh_y0 + cm(5.15), 2)],
+        "content": "text",
+        "text": hi_date_str,
+    })
+    batch([
+        {"command": "object.textFrameOptions", "params": {"ids": [r_ear_hi["id"]], "columns": 1, "verticalJustification": "center"}},
+        {"command": "text.select", "params": {"story": r_ear_hi["story"], "anchor": 0, "focus": 199}},
+        {"command": "type.char", "params": {"attrs": {
+            "fontFamily": "DB Hindi",
+            "fontStyle": "Bold",
+            "size": 12.0,
+            "leading": {"kind": "points", "value": 13.0},
+            "fill": "[Black]",
+        }}},
+        {"command": "type.para", "params": {"attrs": {"align": "center", "firstLineIndent": 0.0, "hyphenate": False, "gridAlign": "none"}}},
     ])
 
     # ==========================================================================
@@ -1348,7 +1585,7 @@ def build_aditya_bharat_page1_option2():
     rpc("app.save", {"path": str(out_pd)})
     rpc("app.export", {"path": str(out_png), "page": 0, "scale": 1.5})
     try:
-        rpc("app.export", {"path": str(out_pdf), "page": 0})
+        rpc("engine.execute", {"command": "file.exportPdf", "params": {"path": str(out_pdf)}})
     except Exception:
         pass
 

@@ -1,3 +1,13 @@
+# Ignore large generated PDF/PageDesigner binaries from Git repo (they are uploaded to Unlimited Free GitHub Releases!)
+*.pdf
+*.pagedesigner
+*.png
+!photos/*.png
+!photos/cutouts/*.png
 __pycache__/
 *.pyc
-.DS_Store
+Page_Designer_Software/
+*.zip
+published_all_editions/*
+!published_all_editions/LAST_COMPLETED_HEARTBEAT.json
+ab_delivery_cloud_config.json

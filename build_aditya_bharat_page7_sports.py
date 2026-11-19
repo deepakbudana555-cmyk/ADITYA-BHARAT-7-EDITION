@@ -163,10 +163,62 @@ def rpc(method: str, params: dict = None):
     return resp.get("result")
 
 
+def draw_bottom_cmyk_press_marka():
+    import os
+    sp = int(os.environ.get("AB_TARGET_SPREAD", "0"))
+    rpc("engine.batch", {"commands": [
+        {"command": "swatch.create", "params": {"name": "PressCyan", "color": "#00aeef"}},
+        {"command": "swatch.create", "params": {"name": "PressMagenta", "color": "#ec008c"}},
+        {"command": "swatch.create", "params": {"name": "PressYellow", "color": "#fff200"}},
+    ]})
+
+    y0 = cm(52.10)
+    y1 = cm(52.42)
+    rule_y = round((y0 + y1) / 2.0, 2)
+
+    # 1. Draw the Full-Width 8-Column Bottom Gray Rule FIRST so it sits BEHIND the CMYK boxes
+    r_bot_rule = rpc("engine.execute", {
+        "command": "line.create",
+        "params": {"spread": sp, "a": [cm(1.0), rule_y], "b": [cm(33.0), rule_y]},
+    })
+    style_cmds = [
+        {"command": "object.stroke", "params": {"ids": [r_bot_rule["id"]], "swatch": "[Black]", "weight": 2.0, "tint": 0.60}},
+    ]
+
+    # 2. Place 4 CMYK Boxes (C, M, Y, K) at 3 Places (LEFT, CENTER, RIGHT) ON TOP of the Gray Rule
+    patches = [
+        ("PressCyan", 1.0),
+        ("PressMagenta", 1.0),
+        ("PressYellow", 1.0),
+        ("[Black]", 1.0),
+    ]
+    box_w = mm(4.0)
+    group_w = round(len(patches) * box_w, 2)
+    group_centers_x = [cm(3.5), cm(17.0), cm(30.5)]
+
+    for cx in group_centers_x:
+        bar_x0 = round(cx - group_w / 2.0, 2)
+        for i, (sw, tn) in enumerate(patches):
+            px0 = round(bar_x0 + i * box_w, 2)
+            px1 = round(px0 + box_w, 2)
+            rf = rpc("engine.execute", {"command": "frame.create", "params": {"spread": sp, "rect": [px0, y0, px1, y1], "content": "unassigned"}})
+            fid = rf["id"]
+            style_cmds.append({"command": "object.fill", "params": {"ids": [fid], "swatch": sw, "tint": tn}})
+            style_cmds.append({"command": "object.stroke", "params": {"ids": [fid], "swatch": "[Black]", "weight": 0.35, "tint": 0.85}})
+
+    if style_cmds:
+        rpc("engine.batch", {"commands": style_cmds})
+
+
 def cmd(command: str, params: dict = None):
     import os
     if command == "file.close" and (os.environ.get("AB_NO_CLOSE") == "1" or os.environ.get("AB_TARGET_SPREAD") is not None):
         return None
+    if command == "edit.deselectAll":
+        try:
+            draw_bottom_cmyk_press_marka()
+        except Exception:
+            pass
     p = dict(params or {})
     if os.environ.get("AB_TARGET_SPREAD") is not None and "spread" in p:
         p["spread"] = int(os.environ["AB_TARGET_SPREAD"])
@@ -1468,7 +1520,7 @@ def build_aditya_bharat_page7_sports():
     rpc("app.save", {"path": str(out_pd)})
     rpc("app.export", {"path": str(out_png), "page": 0, "scale": 1.5})
     try:
-        rpc("app.export", {"path": str(out_pdf), "page": 0})
+        rpc("engine.execute", {"command": "file.exportPdf", "params": {"path": str(out_pdf)}})
     except Exception:
         pass
 
