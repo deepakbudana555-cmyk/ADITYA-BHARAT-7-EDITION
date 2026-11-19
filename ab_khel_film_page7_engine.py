@@ -461,13 +461,21 @@ def place_story_with_cutout(
 def build_aditya_bharat_page7_khel_film_11news(
     date_str: str = "19-11-2026",
     edition_code: str = "RAIPUR",
-    export_desktop_pdf: bool = True,
+    export_desktop_pdf: bool = False,
 ) -> dict:
     t0 = time.perf_counter()
     edition_code = (edition_code or "RAIPUR").strip().upper()
     ensure_real_sports_and_film_photos()
 
     pkg = DAILY_P7_KHEL_FILM_PACKAGES[0]
+    live_p7_path = CACHE_DIR / f"{date_str}_LIVE_P7_KHEL_FILM.json"
+    if live_p7_path.exists():
+        try:
+            lp7 = json.loads(live_p7_path.read_text(encoding="utf-8"))
+            if isinstance(lp7.get("KHEL_FILM_PACKAGE"), dict):
+                pkg.update(lp7["KHEL_FILM_PACKAGE"])
+        except Exception:
+            pass
     sp_stories = pkg["sports_stories"]
     fl_stories = pkg["film_stories"]
 

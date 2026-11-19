@@ -425,7 +425,7 @@ def build_desh_videsh_page8_70_30(
     date_str: str = None,
     edition: str = None,
     force_fresh_live: bool = False,
-    export_desktop_pdf: bool = True,
+    export_desktop_pdf: bool = False,
     print_line_line1: str = None,
     print_line_line2: str = None,
 ) -> dict:

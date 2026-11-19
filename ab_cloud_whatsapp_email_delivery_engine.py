@@ -42,15 +42,15 @@ PUB_ROOT.mkdir(parents=True, exist_ok=True)
 HEARTBEAT_PATH = PUB_ROOT / "LAST_COMPLETED_HEARTBEAT.json"
 
 DEFAULT_CONFIG = {
-    "enabled_auto_send_after_build": False,
-    "daily_schedule_time_24h": "23:30",
+    "enabled_auto_send_after_build": True,
+    "daily_schedule_time_24h": "22:30",
     "email_smtp": {
-        "enabled": False,
+        "enabled": True,
         "smtp_host": "smtp.gmail.com",
         "smtp_port": 587,
-        "sender_email": "",
+        "sender_email": "deepakbudana555@gmail.com",
         "sender_app_password": "",
-        "recipient_emails": [],
+        "recipient_emails": ["deepakbudana555@gmail.com"],
     },
     "whatsapp_cloud_api": {
         "enabled": False,
@@ -65,9 +65,9 @@ DEFAULT_CONFIG = {
     },
     "github_cloud_failover": {
         "enabled": True,
-        "repo_owner_and_name": "",
+        "repo_owner_and_name": "deepakbudana555-cmyk/ADITYA-BHARAT-7-EDITION",
         "auto_push_heartbeat": True,
-        "daily_cron_ist": "23:45",
+        "daily_cron_ist": "22:30",
     },
 }
 
@@ -178,7 +178,7 @@ EDITION_META_ORDER = [
 
 
 def collect_built_editions_for_date(date_str: str) -> list:
-    desktop = Path(r"C:\Users\ADMIN\Desktop")
+    desktop = Path(r"C:\Users\ADMIN\Desktop") if Path(r"C:\Users\ADMIN\Desktop").exists() else (Path.home() / "Desktop")
     pub_date_dir = PUB_ROOT / date_str
     items = []
     for ed_code, city_hi, state_hi in EDITION_META_ORDER:

@@ -1383,7 +1383,7 @@ def build_chhattisgarh_page3_10stories(date_label: str = None, date_str: str = "
     return {"ok": True, "page": 3, "stories": 10, "headline_pts": pts_log, "png": str(out_png), "pdf": str(out_pdf)}
 
 
-def build_both_chhattisgarh_pages_2_and_3(date_str: str = "18-11-2026", force_fresh_live: bool = False, export_desktop_pdf: bool = True) -> dict:
+def build_both_chhattisgarh_pages_2_and_3(date_str: str = "18-11-2026", force_fresh_live: bool = False, export_desktop_pdf: bool = False) -> dict:
     import aditya_bharat_studio_app_2424 as studio
     from PIL import Image
     studio.ensure_page_designer_running()

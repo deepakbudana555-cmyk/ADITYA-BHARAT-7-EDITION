@@ -288,12 +288,11 @@ def fit_aditya_bharat_headline(
     font_style: str = "Bold",
     fill_swatch: str = "[Black]",
     hi_pt: float = 82.0,
-    lo_pt: float = 13.0,
+    lo_pt: float = 30.0,
     fixed_pt: float = None,
     align: str = "left",
     leading_add_pt: float = 1.0,
 ):
-    # Strictly enforce 100% Black ('[Black]') on all headlines & subheads
     fill_swatch = "[Black]"
     clean_text = " ".join(raw_text.replace("\r", " ").replace("\n", " ").split())
     init_h = round((hi_pt + leading_add_pt) * max(1, target_lines) + 28.0, 2)
@@ -309,7 +308,7 @@ def fit_aditya_bharat_headline(
     def calc_lead(pt_val: float) -> float:
         return round(pt_val + leading_add_pt, 2)
 
-    def max_pt_for_line(line_str: str) -> float:
+    def max_pt_for_line(line_str: str, h_scale: float = 1.0) -> float:
         if fixed_pt is not None:
             return fixed_pt
         batch([
@@ -322,7 +321,7 @@ def fit_aditya_bharat_headline(
                 "fontStyle": font_style,
                 "fill": "[Black]",
                 "fillTint": 1.0,
-                "hScale": 1.0,
+                "hScale": h_scale,
                 "tracking": 0.0,
             }}},
             {"command": "type.para", "params": {"attrs": {
@@ -336,10 +335,10 @@ def fit_aditya_bharat_headline(
                 "gridAlign": "none",
             }}},
         ])
-        effective_lo = lo_pt if font_family != "DB Rasrand Bold" else max(lo_pt, 30.0)
-        lo = int(round(effective_lo * 2))
+        search_lo = min(lo_pt, 15.0)
+        lo = int(round(search_lo * 2))
         hi = int(round(hi_pt * 2))
-        best = effective_lo
+        best = search_lo
         while lo <= hi:
             mid = (lo + hi) // 2
             pt = round(mid / 2.0, 2)
@@ -359,9 +358,9 @@ def fit_aditya_bharat_headline(
                 hi = mid - 1
         return best
 
-    def stretch_line(byte_a: int, byte_b: int, max_total_lines: int):
-        lo_s, hi_s = 100, 108
-        best_s = 100
+    def stretch_line(byte_a: int, byte_b: int, max_total_lines: int, min_scale_pct: int = 86):
+        lo_s, hi_s = min_scale_pct, 114
+        best_s = min_scale_pct
         while lo_s <= hi_s:
             mid_s = (lo_s + hi_s) // 2
             st = batch([
@@ -374,6 +373,15 @@ def fit_aditya_bharat_headline(
                 lo_s = mid_s + 1
             else:
                 hi_s = mid_s - 1
+        # Do not over-stretch short lines beyond 108% unless needed, and never shrink below 100% if 100% already fits!
+        if best_s > 108:
+            st_100 = batch([
+                {"command": "text.select", "params": {"story": sid, "anchor": byte_a, "focus": byte_b}},
+                {"command": "type.char", "params": {"attrs": {"hScale": 1.0}}},
+                {"command": "story.get", "params": {"story": sid}},
+            ])[-1]
+            if (st_100.get("lines") or 0) <= max_total_lines and st_100.get("overset") is None:
+                best_s = min(best_s, 106)
         batch([
             {"command": "text.select", "params": {"story": sid, "anchor": byte_a, "focus": byte_b}},
             {"command": "type.char", "params": {"attrs": {"hScale": round(best_s / 100.0, 3)}}},
@@ -382,7 +390,16 @@ def fit_aditya_bharat_headline(
     words = clean_text.split(" ")
     n = len(words)
     if target_lines <= 1 or n < 2:
-        best_pt = max_pt_for_line(clean_text)
+        effective_lo = lo_pt if font_family != "DB Rasrand Bold" else max(lo_pt, 28.0)
+        raw_pt = max_pt_for_line(clean_text, h_scale=1.0)
+        init_hscale = 1.0
+        if raw_pt >= effective_lo:
+            best_pt = min(hi_pt, raw_pt)
+        else:
+            # Try condensed headline width (hScale=0.88) so long 1-line headlines never wrap onto a 2nd orphan line!
+            cond_pt = max_pt_for_line(clean_text, h_scale=0.88)
+            best_pt = min(hi_pt, cond_pt)
+            init_hscale = 0.88
         lead = calc_lead(best_pt)
         batch([
             {"command": "text.select", "params": {"story": sid, "anchor": 0, "focus": 99999}},
@@ -396,12 +413,12 @@ def fit_aditya_bharat_headline(
                 "leading": {"kind": "points", "value": lead},
                 "fill": "[Black]",
                 "fillTint": 1.0,
-                "hScale": 1.0,
+                "hScale": init_hscale,
                 "tracking": 0.0,
             }}},
             {"command": "type.para", "params": {"attrs": {"align": align, "hyphenate": False}}},
         ])
-        stretch_line(0, 99999, 1)
+        stretch_line(0, 99999, 1, min_scale_pct=86 if init_hscale < 1.0 else 96)
         actual_lines = 1
     else:
         candidates = []
@@ -412,18 +429,34 @@ def fit_aditya_bharat_headline(
         candidates.sort(key=lambda x: x[0])
         best_split = (candidates[0][1], candidates[0][2])
         best_score = -999.0
-        best_pt = fixed_pt if fixed_pt is not None else lo_pt
+        effective_lo = lo_pt if font_family != "DB Rasrand Bold" else max(lo_pt, 28.0)
+        best_raw_min = effective_lo
         if fixed_pt is None:
-            for _, l1, l2 in candidates[:5]:
-                pt1 = max_pt_for_line(l1)
-                pt2 = max_pt_for_line(l2)
+            # Evaluate top 6 most balanced character-length splits
+            for _, l1, l2 in candidates[:6]:
+                pt1 = max_pt_for_line(l1, h_scale=1.0)
+                pt2 = max_pt_for_line(l2, h_scale=1.0)
                 raw_min = min(pt1, pt2, hi_pt)
-                score = raw_min - 0.6 * abs(pt1 - pt2)
+                score = raw_min - 0.45 * abs(pt1 - pt2)
                 if score > best_score:
                     best_score = score
-                    best_pt = max(lo_pt, raw_min)
+                    best_raw_min = raw_min
                     best_split = (l1, l2)
-        l1_str, l2_str = best_split
+            l1_str, l2_str = best_split
+            init_hscale = 1.0
+            if best_raw_min >= effective_lo:
+                best_pt = best_raw_min
+            else:
+                # Use condensed hScale=0.88 and strictly fit within 1 line per half so it NEVER breaks onto a 3rd line!
+                cpt1 = max_pt_for_line(l1_str, h_scale=0.88)
+                cpt2 = max_pt_for_line(l2_str, h_scale=0.88)
+                best_pt = min(cpt1, cpt2, hi_pt)
+                init_hscale = 0.88
+        else:
+            best_pt = fixed_pt
+            l1_str, l2_str = best_split
+            init_hscale = 1.0
+
         two_line_txt = f"{l1_str}\n{l2_str}"
         lead = calc_lead(best_pt)
         l1_bytes = len(l1_str.encode("utf-8"))
@@ -440,13 +473,14 @@ def fit_aditya_bharat_headline(
                 "leading": {"kind": "points", "value": lead},
                 "fill": "[Black]",
                 "fillTint": 1.0,
-                "hScale": 1.0,
+                "hScale": init_hscale,
                 "tracking": 0.0,
             }}},
             {"command": "type.para", "params": {"attrs": {"align": align, "hyphenate": False}}},
         ])
-        stretch_line(0, l1_bytes, 2)
-        stretch_line(l1_bytes + 1, total_bytes, 2)
+        min_sc = 86 if init_hscale < 1.0 else 96
+        stretch_line(0, l1_bytes, 2, min_scale_pct=min_sc)
+        stretch_line(l1_bytes + 1, total_bytes, 2, min_scale_pct=min_sc)
         actual_lines = 2
 
     lo_h = max(12, int(best_pt * actual_lines * 0.72))

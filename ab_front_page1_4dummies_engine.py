@@ -909,7 +909,7 @@ def build_aditya_bharat_page1_with_dummy(
     date_str: str = "19-11-2026",
     edition_code: str = "RAIPUR",
     dummy_id: str = "AUTO",
-    export_desktop_pdf: bool = True,
+    export_desktop_pdf: bool = False,
 ) -> dict:
     t0 = time.perf_counter()
     edition_code = (edition_code or "RAIPUR").strip().upper()
@@ -928,6 +928,16 @@ def build_aditya_bharat_page1_with_dummy(
             chosen_dummy = "DUMMY_1"
 
     state_grp = edition_to_state_group(edition_code)
+    live_p1_path = CACHE_DIR / f"{date_str}_LIVE_P1_4STATES.json"
+    if live_p1_path.exists():
+        try:
+            lp1 = json.loads(live_p1_path.read_text(encoding="utf-8"))
+            if isinstance(lp1.get("EDITION_STATE_3_STORIES"), dict):
+                EDITION_STATE_3_STORIES.update(lp1["EDITION_STATE_3_STORIES"])
+            if isinstance(lp1.get("CORE_PAGE1_8_STORIES"), dict):
+                CORE_PAGE1_8_STORIES.update(lp1["CORE_PAGE1_8_STORIES"])
+        except Exception:
+            pass
     st_list = EDITION_STATE_3_STORIES.get(state_grp, EDITION_STATE_3_STORIES["CG"])
     # 1. Top 6-Col Banner Flyer + 2-Col Photo right under Masthead = State CM Flagship Story!
     fl_obj = st_list[0]

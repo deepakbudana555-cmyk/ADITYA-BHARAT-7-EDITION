@@ -291,6 +291,14 @@ def build_daily_karobar_page6(
     hist = load_history()
 
     pkg = DAILY_P6_PACKAGES[0]
+    live_p6_path = CACHE_DIR / f"{date_str}_LIVE_P6_KAROBAR.json"
+    if live_p6_path.exists():
+        try:
+            lp6 = json.loads(live_p6_path.read_text(encoding="utf-8"))
+            if isinstance(lp6.get("KAROBAR_PACKAGE"), dict):
+                pkg.update(lp6["KAROBAR_PACKAGE"])
+        except Exception:
+            pass
     hist.setdefault("used_by_date", {})[date_str] = pkg["package_id"]
     if pkg["package_id"] not in hist.get("used_package_ids", []):
         hist.setdefault("used_package_ids", []).append(pkg["package_id"])

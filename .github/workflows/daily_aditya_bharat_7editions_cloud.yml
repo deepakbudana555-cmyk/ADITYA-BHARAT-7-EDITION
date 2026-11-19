@@ -1,62 +1,49 @@
-name: "📰 दैनिक आदित्य भारत — 7-Edition (4-State) Hybrid Cloud Builder + WhatsApp & Email Delivery"
+name: "⏰ दैनिक आदित्य भारत — Daily 10:30 PM IST (7 Editions • 4 States • 1–8 Single Vector PDF + Email to deepakbudana555@gmail.com)"
 
 on:
   schedule:
-    # Runs daily at 18:15 UTC (11:45 PM IST) as automatic failover when Local PC is OFF
-    - cron: "15 18 * * *"
+    # Runs AUTOMATICALLY EVERY NIGHT at 10:30 PM IST (22:30 IST = 17:00 UTC)
+    - cron: "0 17 * * *"
   workflow_dispatch:
     inputs:
       edition_date:
-        description: "अख़बार की दिनांक (DD-MM-YYYY) या खाली छोड़ें (आज की तारीख अपने-आप लेगा)"
+        description: "अख़बार की दिनांक (DD-MM-YYYY) या खाली छोड़ें (10:30 PM पर अगले दिन की तारीख अपने-आप लेगा)"
         required: false
         default: ""
       p1_dummy_id:
         description: "पेज 01 फ्रंट पेज डमी (AUTO / DUMMY_1 / DUMMY_2 / DUMMY_3 / DUMMY_4)"
         required: false
         default: "AUTO"
-      force_cloud_build:
-        description: "Local PC चालू होने पर भी जबरन क्लाउड से बनाएं? (true / false)"
-        required: false
-        default: "true"
 
 permissions:
   contents: write
 
 jobs:
-  build_and_deliver_all_7_editions:
-    name: "Build All 7 Editions (CG • MP • DL • RJ) & Send 1-8 Vector PDFs to WhatsApp + Email"
+  build_and_email_all_7_editions_at_1030pm:
+    name: "⏰ 10:30 PM Daily Build: Original Live News + 7 Editions (CG • MP • DL • RJ) + Email to deepakbudana555@gmail.com"
     runs-on: windows-latest
 
     steps:
       - name: "1. Checkout ADITYA-BHARAT-7-EDITION Repository"
         uses: actions/checkout@v4
 
-      - name: "2. Resolve Edition Date (IST) & Check Hybrid Local-PC Heartbeat"
-        id: check_hb
+      - name: "2. Resolve Next-Morning Newspaper Edition Date at 10:30 PM IST"
+        id: resolve_date
         shell: pwsh
         run: |
           $inputDate = "${{ github.event.inputs.edition_date }}"
           if ([string]::IsNullOrWhiteSpace($inputDate)) {
             $istNow = (Get-Date).ToUniversalTime().AddHours(5.5)
-            $dateStr = $istNow.ToString("dd-MM-yyyy")
+            # At 10:30 PM night press time, build the next morning's edition date
+            $pubDate = $istNow.AddDays(1)
+            $dateStr = $pubDate.ToString("dd-MM-yyyy")
           } else {
             $dateStr = $inputDate.Trim()
           }
+          Write-Host "📰 Building Daily 10:30 PM Complete 7-Edition Newspaper for Edition Date: $dateStr"
           echo "date_str=$dateStr" >> $env:GITHUB_OUTPUT
 
-          $forceBuild = "${{ github.event.inputs.force_cloud_build }}"
-          $skipCloud = "false"
-          if ($forceBuild -ne "true" -and (Test-Path "published_all_editions/LAST_COMPLETED_HEARTBEAT.json")) {
-            $hb = Get-Content "published_all_editions/LAST_COMPLETED_HEARTBEAT.json" | ConvertFrom-Json
-            if ($hb.date_str -eq $dateStr -and $hb.source -eq "LOCAL_PC" -and $hb.editions_count -ge 7) {
-              Write-Host "✅ Local PC already built all 7 editions for $dateStr! Skipping Cloud Failover."
-              $skipCloud = "true"
-            }
-          }
-          echo "skip_cloud=$skipCloud" >> $env:GITHUB_OUTPUT
-
       - name: "3. Install DB Hindi & DB Rasrand Newspaper Fonts on Windows Cloud Server"
-        if: steps.check_hb.outputs.skip_cloud != 'true'
         shell: pwsh
         run: |
           $fontsDir = Join-Path $PWD "fonts"
@@ -70,7 +57,6 @@ jobs:
           Write-Host "✅ Installed all DB Hindi & DB Rasrand fonts into Windows Cloud Server."
 
       - name: "4. Download Page Designer C++ Runtime from Release v1.0.0-runtime"
-        if: steps.check_hb.outputs.skip_cloud != 'true'
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -83,52 +69,46 @@ jobs:
           }
 
       - name: "5. Setup Python 3.11 & AI Cutout / Image Dependencies"
-        if: steps.check_hb.outputs.skip_cloud != 'true'
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
       - name: "6. Install Python Libraries (Pillow, NumPy, SciPy, OpenCV, Rembg)"
-        if: steps.check_hb.outputs.skip_cloud != 'true'
         shell: pwsh
         run: |
           python -m pip install --upgrade pip
           pip install pillow numpy scipy opencv-python-headless rembg onnxruntime
 
-      - name: "7. Build All 7 Editions (4 States) + 7 Single 1–8 Vector PDFs + Deliver to Email & WhatsApp"
-        if: steps.check_hb.outputs.skip_cloud != 'true'
+      - name: "7. Harvest Today's Original Live News + Build All 7 Editions (Pages 1–8) + Email Vector PDFs to deepakbudana555@gmail.com"
         shell: pwsh
         env:
-          AB_EDITION_DATE: ${{ steps.check_hb.outputs.date_str }}
+          AB_EDITION_DATE: ${{ steps.resolve_date.outputs.date_str }}
           AB_P1_DUMMY: ${{ github.event.inputs.p1_dummy_id || 'AUTO' }}
           PAGEDESIGNER_EXE: ${{ github.workspace }}\Page_Designer_Software\pagedesigner.exe
-          AB_SMTP_EMAIL: ${{ secrets.AB_SMTP_EMAIL }}
+          AB_SMTP_EMAIL: ${{ secrets.AB_SMTP_EMAIL || 'deepakbudana555@gmail.com' }}
           AB_SMTP_APP_PASSWORD: ${{ secrets.AB_SMTP_APP_PASSWORD }}
-          AB_RECIPIENT_EMAILS: ${{ secrets.AB_RECIPIENT_EMAILS }}
+          AB_RECIPIENT_EMAILS: ${{ secrets.AB_RECIPIENT_EMAILS || 'deepakbudana555@gmail.com' }}
           AB_WA_PHONE_NUMBER_ID: ${{ secrets.AB_WA_PHONE_NUMBER_ID }}
           AB_WA_ACCESS_TOKEN: ${{ secrets.AB_WA_ACCESS_TOKEN }}
           AB_WA_RECIPIENTS: ${{ secrets.AB_WA_RECIPIENTS }}
           AB_TG_BOT_TOKEN: ${{ secrets.AB_TG_BOT_TOKEN }}
           AB_TG_CHAT_ID: ${{ secrets.AB_TG_CHAT_ID }}
         run: |
-          $dateStr = "${{ steps.check_hb.outputs.date_str }}"
-          $dummyId = "${{ github.event.inputs.p1_dummy_id }}"
-          if ([string]::IsNullOrWhiteSpace($dummyId)) { $dummyId = "AUTO" }
-          python ab_daily_8page_full_edition_orchestrator.py $dateStr ALL $dummyId
+          $dateStr = "${{ steps.resolve_date.outputs.date_str }}"
+          python ab_daily_8page_full_edition_orchestrator.py $dateStr --auto-1030pm
 
       - name: "8. Upload All 7 Single 1–8 Page Vector PDFs to GitHub Releases (Unlimited Free Storage)"
-        if: steps.check_hb.outputs.skip_cloud != 'true'
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          $dateStr = "${{ steps.check_hb.outputs.date_str }}"
+          $dateStr = "${{ steps.resolve_date.outputs.date_str }}"
           $tag = "editions-$dateStr"
           $pdfs = Get-ChildItem -Path "published_all_editions/$dateStr" -Recurse -Filter "*.pdf"
           $pngs = Get-ChildItem -Path "published_all_editions/$dateStr" -Recurse -Filter "*.png"
           $allFiles = @($pdfs) + @($pngs)
           if ($allFiles.Count -gt 0) {
-            gh release create $tag --title "दैनिक आदित्य भारत — सभी 7 संस्करण (1–8 पेज Vector PDF) | $dateStr" --notes "स्वचालित रूप से तैयार सभी 7 संस्करणों (रायपुर, बिलासपुर, राजनांदगांव, इंदौर, भोपाल, नई दिल्ली, जयपुर) की 1 से 8 पेज की सिंगल 100% Pure Vector PDFs।" --latest
+            gh release create $tag --title "दैनिक आदित्य भारत — सभी 7 संस्करण (1–8 पेज Vector PDF) | $dateStr" --notes "रात 10:30 बजे स्वचालित रूप से ताज़ा खबरों से तैयार सभी 7 संस्करणों (रायपुर, बिलासपुर, राजनांदगांव, इंदौर, भोपाल, नई दिल्ली, जयपुर) की 1 से 8 पेज की सिंगल 100% Pure Vector PDFs।" --latest
             foreach ($f in $allFiles) {
               gh release upload $tag $f.FullName --clobber
             }

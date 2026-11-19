@@ -404,7 +404,7 @@ DAILY_P5_12NEWS_PACKAGES = [
 def build_aditya_bharat_page5_pradeshik_12news(
     date_str: str = "19-11-2026",
     edition_code: str = "RAIPUR",
-    export_desktop_pdf: bool = True,
+    export_desktop_pdf: bool = False,
 ) -> dict:
     t0 = time.perf_counter()
     edition_code = (edition_code or "RAIPUR").strip().upper()
@@ -412,6 +412,14 @@ def build_aditya_bharat_page5_pradeshik_12news(
 
     other_headlines = collect_all_other_pages_headlines(date_str)
     pkg = DAILY_P5_12NEWS_PACKAGES[0]
+    live_p5_path = CACHE_DIR / f"{date_str}_LIVE_P5_PRADESHIK.json"
+    if live_p5_path.exists():
+        try:
+            lp5 = json.loads(live_p5_path.read_text(encoding="utf-8"))
+            if isinstance(lp5.get("stories"), list) and len(lp5["stories"]) == 12:
+                pkg["stories"] = lp5["stories"]
+        except Exception:
+            pass
     stories = pkg["stories"]
 
     # Verify zero repetition against Page 02, Page 03, and all other pages

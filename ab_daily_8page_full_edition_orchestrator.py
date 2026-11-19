@@ -42,7 +42,8 @@ VAULT_DIR = Path(__file__).resolve().parent
 if str(VAULT_DIR) not in sys.path:
     sys.path.insert(0, str(VAULT_DIR))
 
-DESKTOP_DIR = Path(r"C:\Users\ADMIN\Desktop")
+DESKTOP_DIR = Path(r"C:\Users\ADMIN\Desktop") if Path(r"C:\Users\ADMIN\Desktop").exists() else (Path.home() / "Desktop")
+DESKTOP_DIR.mkdir(parents=True, exist_ok=True)
 PD_PORT = 47123
 CM_TO_PT = 72.0 / 2.54
 MM_TO_PT = CM_TO_PT / 10.0
@@ -149,7 +150,7 @@ def build_daily_full_8page_newspaper_and_single_vector_pdf(
 
         _notify(f"⏳ [2-3/8] पेज 02 और पेज 03 छत्तीसगढ़ (10+10 खबरें) तैयार हो रहे हैं...")
         import ab_chhattisgarh_10x2_engine as cg_eng
-        cg_eng.build_both_chhattisgarh_pages_2_and_3(date_str=date_str, force_fresh_live=False, export_desktop_pdf=True)
+        cg_eng.build_both_chhattisgarh_pages_2_and_3(date_str=date_str, force_fresh_live=False, export_desktop_pdf=False)
 
         _notify(f"⏳ [4/8] पेज 04 संपादकीय (आदित्य भारत सेंटर लोगो + दैनिक आलेख) तैयार हो रहा है...")
         import ab_sampadakiya_page4_engine as p4_eng
@@ -169,7 +170,7 @@ def build_daily_full_8page_newspaper_and_single_vector_pdf(
 
         _notify(f"⏳ [8/8] पेज 08 देश-विदेश (70% राष्ट्रीय + 30% विदेशी + {edition_code} Print Line) तैयार हो रहा है...")
         import ab_desh_videsh_page8_engine as p8_eng
-        p8_eng.build_desh_videsh_page8_70_30(date_str=date_str, edition=edition_code, force_fresh_live=False, export_desktop_pdf=True)
+        p8_eng.build_desh_videsh_page8_70_30(date_str=date_str, edition=edition_code, force_fresh_live=False, export_desktop_pdf=False)
 
     # 2. Now assemble all 8 pages (Spreads 0..7) into ONE Single 8-Page Document in Page Designer
     #    and export the Single 1-to-8 Page 100% Pure Vector PDF (`file.exportPdf`)!
@@ -540,6 +541,15 @@ def build_all_7_editions_4_states_with_single_vector_pdfs(
     _send_rpc(s_fin, f_fin, "ui.focus", {})
     s_fin.close()
 
+    # Clean up any single-page or generic duplicate Aditya_Bharat PDFs from Desktop so ONLY the 7 final 1-8 Vector PDFs remain!
+    keep_names = {Path(e["desktop_vector_pdf"]).name for e in editions_out}
+    for p_extra in DESKTOP_DIR.glob("*Aditya_Bharat*.pdf"):
+        if p_extra.name not in keep_names:
+            try:
+                p_extra.unlink()
+            except Exception:
+                pass
+
     # Trigger Hybrid Local/Cloud Heartbeat + Auto-Email + Auto-WhatsApp/Telegram Delivery
     delivery_res = {}
     try:
@@ -667,18 +677,12 @@ def run_1030pm_night_desk_auto_edition_job(
             except Exception:
                 pass
 
-    _notify(f"⏰ [10:30 PM NIGHT-DESK AUTO ALARM] दिनांक {target_edition_date} के लिए देश-दुनिया व 4 राज्यों की ताज़ा खबरें कलेक्ट की जा रही हैं...")
+    _notify(f"⏰ [10:30 PM NIGHT-DESK AUTO ALARM] दिनांक {target_edition_date} के लिए देश-दुनिया व 4 राज्यों (CG, MP, DL, RJ) की ताज़ा ओरिजिनल खबरें कलेक्ट की जा रही हैं...")
     try:
-        import ab_chhattisgarh_10x2_engine as cg_eng
-        cg_eng.harvest_20_non_repeating_chhattisgarh_stories(target_edition_date, force_fresh_live=True)
+        import ab_night_desk_1030pm_live_harvester as live_1030
+        live_1030.harvest_all_8_pages_original_live_news_at_1030pm(target_edition_date)
     except Exception as e:
-        print(f"[WARN] 10:30 PM CG live harvest fallback: {e}")
-
-    try:
-        import ab_desh_videsh_page8_engine as p8_eng
-        p8_eng.harvest_desh_videsh_page8_for_date(target_edition_date, force_fresh_live=True)
-    except Exception as e:
-        print(f"[WARN] 10:30 PM Page 8 live harvest fallback: {e}")
+        print(f"[WARN] 10:30 PM unified live harvest warning: {e}")
 
     res = build_all_7_editions_4_states_with_single_vector_pdfs(
         date_str=target_edition_date,
