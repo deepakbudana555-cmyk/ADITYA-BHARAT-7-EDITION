@@ -712,6 +712,7 @@ def run_1030pm_night_desk_auto_edition_job(
     )
     save_daily_1030pm_alarm_config({
         "last_triggered_date": now.strftime("%Y-%m-%d"),
+        "last_triggered_slot": f"{now.strftime('%Y-%m-%d')}_{now.strftime('%H:%M')}",
         "last_triggered_timestamp": now.strftime("%d-%m-%Y %H:%M:%S"),
         "last_built_edition_date": target_edition_date,
         "last_run_status": f"Completed 7 Editions (4 States) for {target_edition_date} in {res.get('elapsed_sec')}s",

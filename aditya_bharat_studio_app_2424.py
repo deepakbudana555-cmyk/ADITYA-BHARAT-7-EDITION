@@ -2881,7 +2881,8 @@ def start_daily_1030pm_alarm_daemon():
                     cur_hm = now.strftime("%H:%M")
                     today_iso = now.strftime("%Y-%m-%d")
                     target_hm = (cfg.get("alarm_time_24h") or "22:30").strip()
-                    if cur_hm == target_hm and cfg.get("last_triggered_date") != today_iso:
+                    slot_key = f"{today_iso}_{target_hm}"
+                    if cur_hm == target_hm and cfg.get("last_triggered_slot") != slot_key:
                         with BUILD_LOCK:
                             BUILD_STATUS["running"] = True
                             BUILD_STATUS["current_task"] = f"⏰ [AUTO 10:30 PM ALARM FIRED ({cur_hm})] ताज़ा खबरें खींचकर सभी 7 संस्करण (Pages 1–8) बन रहे हैं..."
