@@ -1215,25 +1215,33 @@ def build_aditya_bharat_page5_edit():
     auth_wrap_target_y1 = snap_top_lines_bottom(lead_body_y0, num_blocked_lines=8)
     auth_bot_off = max(2.0, round(auth_wrap_target_y1 - auth_y1, 2))
 
-    auth_photo_src = p4_data.get("lead_author_photo") or "p4_author_photo.jpg"
-    auth_img_path = prepare_cmyk_edit_photo(auth_photo_src, "ab_p5_author_cmyk.jpg", auth_w, auth_h, crop_mode="cover")
-    r_auth_ph = cmd("frame.create", {
-        "spread": 0,
-        "rect": [auth_x0, auth_y0, auth_x1, auth_y1],
-        "content": "graphic",
-    })
-    batch([
-        {"command": "file.place", "params": {"frame": r_auth_ph["id"], "path": str(auth_img_path)}},
-        {"command": "object.fit", "params": {"ids": [r_auth_ph["id"]], "mode": "fillProportionally"}},
-        {"command": "object.stroke", "params": {"ids": [r_auth_ph["id"]], "swatch": "[Black]", "weight": 0.85, "tint": 1.0}},
-        {"command": "object.textWrap", "params": {"ids": [r_auth_ph["id"]], "mode": "boundingBox", "offset": [0.0, 0.0, auth_bot_off, 4.0]}},
-    ])
+    auth_photo_src = (p4_data.get("lead_author_photo") or "").strip()
+    show_author_photo = bool(auth_photo_src and auth_photo_src.upper() != "NONE")
 
-    by_x0 = round(auth_x1 + 5.5, 2)
+    if show_author_photo:
+        auth_img_path = prepare_cmyk_edit_photo(auth_photo_src, "ab_p5_author_cmyk.jpg", auth_w, auth_h, crop_mode="cover")
+        r_auth_ph = cmd("frame.create", {
+            "spread": 0,
+            "rect": [auth_x0, auth_y0, auth_x1, auth_y1],
+            "content": "graphic",
+        })
+        batch([
+            {"command": "file.place", "params": {"frame": r_auth_ph["id"], "path": str(auth_img_path)}},
+            {"command": "object.fit", "params": {"ids": [r_auth_ph["id"]], "mode": "fillProportionally"}},
+            {"command": "object.stroke", "params": {"ids": [r_auth_ph["id"]], "swatch": "[Black]", "weight": 0.85, "tint": 1.0}},
+            {"command": "object.textWrap", "params": {"ids": [r_auth_ph["id"]], "mode": "boundingBox", "offset": [0.0, 0.0, auth_bot_off, 4.0]}},
+        ])
+        by_x0 = round(auth_x1 + 5.5, 2)
+        by_align = "left"
+    else:
+        # Clean Author Byline Box without old mugshot photo ("कई आलेखों में लेखक फोटो के बिना सीधा लेखक परिचय बॉक्स")
+        by_x0 = r_col1_x0
+        by_align = "center"
+
     by_x1 = r_col1_x1
     by_y0 = auth_y0
     by_y1 = auth_y1
-    auth_name_line = (p4_data.get("lead_author_name") or "डॉ. राजीव रंजन").strip() + "\n"
+    auth_name_line = (p4_data.get("lead_author_name") or "प्रो. अरविंद मोहन").strip() + "\n"
     auth_desig_line = p4_data.get("lead_author_desig") or "वरिष्ठ आर्थिक एवं\nनीति विश्लेषक,\nनई दिल्ली"
     auth_full_txt = auth_name_line + auth_desig_line
     name_b = len(auth_name_line.encode("utf-8"))
@@ -1245,23 +1253,23 @@ def build_aditya_bharat_page5_edit():
         "text": auth_full_txt,
     })
     batch([
-        {"command": "object.fill", "params": {"ids": [r_auth_byline["id"]], "swatch": "[None]", "tint": 0.0}},
-        {"command": "object.stroke", "params": {"ids": [r_auth_byline["id"]], "swatch": "[None]", "weight": 0.0, "tint": 0.0}},
+        {"command": "object.fill", "params": {"ids": [r_auth_byline["id"]], "swatch": "[None]" if show_author_photo else "EditPointerBg", "tint": 0.0 if show_author_photo else 1.0}},
+        {"command": "object.stroke", "params": {"ids": [r_auth_byline["id"]], "swatch": "[None]" if show_author_photo else "ClosingGray", "weight": 0.0 if show_author_photo else 0.75, "tint": 0.0 if show_author_photo else 0.8}},
         {"command": "object.textWrap", "params": {"ids": [r_auth_byline["id"]], "mode": "boundingBox", "offset": [0.0, 0.0, auth_bot_off, 0.0]}},
         {"command": "object.textFrameOptions", "params": {
             "ids": [r_auth_byline["id"]],
             "columns": 1,
-            "inset": [2.0, 2.0, 2.0, 0.0],
+            "inset": [2.0, 2.0, 2.0, 0.0] if show_author_photo else [4.0, 6.0, 4.0, 6.0],
             "verticalJustification": "center",
         }},
         {"command": "text.select", "params": {"story": r_auth_byline["story"], "anchor": 0, "focus": 999}},
-        {"command": "type.para", "params": {"attrs": {"align": "left", "firstLineIndent": 0.0, "spaceBefore": 0.0, "spaceAfter": 2.5, "gridAlign": "none", "hyphenate": False}}},
+        {"command": "type.para", "params": {"attrs": {"align": by_align, "firstLineIndent": 0.0, "spaceBefore": 0.0, "spaceAfter": 2.5, "gridAlign": "none", "hyphenate": False}}},
         {"command": "text.select", "params": {"story": r_auth_byline["story"], "anchor": 0, "focus": name_b - 1}},
         {"command": "type.char", "params": {"attrs": {
             "fontFamily": "DB Hindi",
             "fontStyle": "Bold",
-            "size": 13.0,
-            "leading": {"kind": "points", "value": 14.5},
+            "size": 13.5,
+            "leading": {"kind": "points", "value": 15.0},
             "fill": "[Black]",
             "fillTint": 1.0,
         }}},
@@ -1272,7 +1280,7 @@ def build_aditya_bharat_page5_edit():
             "size": 11.0,
             "leading": {"kind": "points", "value": 12.2},
             "fill": "[Black]",
-            "fillTint": 0.65,
+            "fillTint": 0.70,
         }}},
     ])
 
