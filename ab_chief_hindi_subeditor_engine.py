@@ -868,6 +868,7 @@ def run_chief_hindi_subeditor_for_all_8_pages(date_str: str) -> dict:
         "stories": cg_stories,
     }
     (CACHE_DIR / f"{date_str}_CHHATTISGARH_20_STORIES.json").write_text(json.dumps(cg_payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    (cg_eng.HARVEST_DIR / f"{date_str}_CHHATTISGARH_20_STORIES.json").write_text(json.dumps(cg_payload, ensure_ascii=False, indent=2), encoding="utf-8")
     cg_eng.CG_JSON_PATH.write_text(json.dumps(cg_payload, ensure_ascii=False, indent=2), encoding="utf-8")
     report["pages"]["pages_02_03_chhattisgarh"] = {"stories": 20}
 
@@ -1047,6 +1048,7 @@ def run_chief_hindi_subeditor_for_all_8_pages(date_str: str) -> dict:
         "stories": p8_stories,
     }
     (CACHE_DIR / f"{date_str}_DESH_VIDESH_PAGE8_10_STORIES.json").write_text(json.dumps(p8_payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    (p8_eng.HARVEST_DIR / f"{date_str}_DESH_VIDESH_PAGE8_10_STORIES.json").write_text(json.dumps(p8_payload, ensure_ascii=False, indent=2), encoding="utf-8")
     p8_eng.P8_JSON_PATH.write_text(json.dumps(p8_payload, ensure_ascii=False, indent=2), encoding="utf-8")
     report["pages"]["page_08_desh_videsh"] = {"stories": 10}
 
