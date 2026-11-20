@@ -324,7 +324,7 @@ def fit_aditya_bharat_headline(
                 "gridAlign": "none",
             }}},
         ])
-        search_lo = min(lo_pt, 15.0)
+        search_lo = 9.5 if font_family != "DB Rasrand Bold" else min(lo_pt, 15.0)
         lo = int(round(search_lo * 2))
         hi = int(round(hi_pt * 2))
         best = search_lo
