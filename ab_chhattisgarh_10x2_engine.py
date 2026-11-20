@@ -772,10 +772,8 @@ def _patch_mod_for_chhattisgarh(mod):
 def build_chhattisgarh_page2_10stories(date_label: str = None, date_str: str = "18-11-2026", force_fresh_live: bool = False) -> dict:
     t0 = time.perf_counter()
     data = harvest_chhattisgarh_news_for_date(date_str, force_fresh_live=force_fresh_live)
-    city_map = {"RAIPUR": "रायपुर", "BILASPUR": "बिलासपुर", "RAJNANDGAON": "राजनांदगांव", "INDORE": "इंदौर", "BHOPAL": "भोपाल", "NEW_DELHI": "नई दिल्ली", "JAIPUR": "जयपुर"}
-    ed_city = city_map.get(os.environ.get("AB_EDITION", "RAIPUR").strip().upper(), "रायपुर")
     if not date_label:
-        date_label = f"{ed_city}, {data.get('dateline_hi', format_hindi_dateline(date_str))}  |"
+        date_label = data.get("dateline_hi", format_hindi_dateline(date_str)) + "  |"
     p2_stories = [s for s in data["stories"] if s["page"] == 2]
 
     spec = importlib.util.spec_from_file_location("ab_base_p8_for_p2", str(VAULT_DIR / "build_aditya_bharat_page8_desh_videsh.py"))
@@ -1077,10 +1075,8 @@ def build_chhattisgarh_page2_10stories(date_label: str = None, date_str: str = "
 def build_chhattisgarh_page3_10stories(date_label: str = None, date_str: str = "18-11-2026", force_fresh_live: bool = False) -> dict:
     t0 = time.perf_counter()
     data = harvest_chhattisgarh_news_for_date(date_str, force_fresh_live=force_fresh_live)
-    city_map = {"RAIPUR": "रायपुर", "BILASPUR": "बिलासपुर", "RAJNANDGAON": "राजनांदगांव", "INDORE": "इंदौर", "BHOPAL": "भोपाल", "NEW_DELHI": "नई दिल्ली", "JAIPUR": "जयपुर"}
-    ed_city = city_map.get(os.environ.get("AB_EDITION", "RAIPUR").strip().upper(), "रायपुर")
     if not date_label:
-        date_label = f"{ed_city}, {data.get('dateline_hi', format_hindi_dateline(date_str))}  |"
+        date_label = data.get("dateline_hi", format_hindi_dateline(date_str)) + "  |"
     p3_stories = [s for s in data["stories"] if s["page"] == 3]
 
     spec = importlib.util.spec_from_file_location("ab_base_p8_for_p3", str(VAULT_DIR / "build_aditya_bharat_page8_desh_videsh.py"))
