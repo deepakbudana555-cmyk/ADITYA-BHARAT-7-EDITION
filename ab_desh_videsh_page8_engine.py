@@ -350,19 +350,55 @@ def harvest_desh_videsh_page8_for_date(date_str: str = "18-11-2026", force_fresh
             continue
 
     stories = [dict(s) for s in BASE_P8_10_STORIES]
+    try:
+        import ab_chief_hindi_subeditor_engine as subed
+    except Exception:
+        subed = None
     ni, ii = 0, 0
     for s in stories:
         s["date"] = date_str
         lo_c, hi_c = P8_SLOT_CHAR_BUDGETS.get(s["role"], (44, 56))
+        min_w = 5 if hi_c <= 38 else 6
+        max_w = 6 if hi_c <= 38 else 8
         if s["category"] == "NATIONAL" and ni < len(nat_live):
             raw_t = nat_live[ni]
             ni += 1
             s["live_rss_reference"] = raw_t
+            if subed:
+                pkg = subed.subedit_complete_story_package(
+                    raw_t, "", beat="NATIONAL", default_city=s.get("city", "नई दिल्ली"),
+                    default_agency=s.get("agency", "ब्यूरो"), default_blurb=s.get("blurb", "राष्ट्रीय"),
+                    min_words=min_w, max_words=max_w, min_chars=max(20, lo_c - 8), max_chars=hi_c,
+                )
+                if pkg["headline"]:
+                    s["headline"] = pkg["headline"]
+                    if s.get("subhead"):
+                        s["subhead"] = pkg["subhead"]
+                    s["city"] = pkg["city"]
+                    s["blurb"] = pkg["blurb"]
+                    s["body"] = pkg["body"]
+                    if s.get("box_bullets"):
+                        s["box_bullets"] = pkg["box_bullets"]
             used_set.add(raw_t)
         elif s["category"] == "INTERNATIONAL" and ii < len(intl_live):
             raw_t = intl_live[ii]
             ii += 1
             s["live_rss_reference"] = raw_t
+            if subed:
+                pkg = subed.subedit_complete_story_package(
+                    raw_t, "", beat="INTERNATIONAL", default_city=s.get("city", "न्यूयॉर्क"),
+                    default_agency=s.get("agency", "एजेंसी"), default_blurb=s.get("blurb", "विश्व"),
+                    min_words=min_w, max_words=max_w, min_chars=max(20, lo_c - 8), max_chars=hi_c,
+                )
+                if pkg["headline"]:
+                    s["headline"] = pkg["headline"]
+                    if s.get("subhead"):
+                        s["subhead"] = pkg["subhead"]
+                    s["city"] = pkg["city"]
+                    s["blurb"] = pkg["blurb"]
+                    s["body"] = pkg["body"]
+                    if s.get("box_bullets"):
+                        s["box_bullets"] = pkg["box_bullets"]
             used_set.add(raw_t)
 
     try:
@@ -898,6 +934,7 @@ def build_desh_videsh_page8_70_30(
 
 
 if __name__ == "__main__":
+    import sys
     d_arg = sys.argv[1] if len(sys.argv) > 1 else os.environ.get("AB_EDITION_DATE", "19-11-2026")
     ed_arg = sys.argv[2] if len(sys.argv) > 2 else os.environ.get("AB_EDITION", "RAIPUR")
     build_desh_videsh_page8_70_30(date_str=d_arg, edition=ed_arg)

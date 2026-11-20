@@ -772,8 +772,10 @@ def _patch_mod_for_chhattisgarh(mod):
 def build_chhattisgarh_page2_10stories(date_label: str = None, date_str: str = "18-11-2026", force_fresh_live: bool = False) -> dict:
     t0 = time.perf_counter()
     data = harvest_chhattisgarh_news_for_date(date_str, force_fresh_live=force_fresh_live)
+    city_map = {"RAIPUR": "रायपुर", "BILASPUR": "बिलासपुर", "RAJNANDGAON": "राजनांदगांव", "INDORE": "इंदौर", "BHOPAL": "भोपाल", "NEW_DELHI": "नई दिल्ली", "JAIPUR": "जयपुर"}
+    ed_city = city_map.get(os.environ.get("AB_EDITION", "RAIPUR").strip().upper(), "रायपुर")
     if not date_label:
-        date_label = data.get("dateline_hi", format_hindi_dateline(date_str)) + "  |"
+        date_label = f"{ed_city}, {data.get('dateline_hi', format_hindi_dateline(date_str))}  |"
     p2_stories = [s for s in data["stories"] if s["page"] == 2]
 
     spec = importlib.util.spec_from_file_location("ab_base_p8_for_p2", str(VAULT_DIR / "build_aditya_bharat_page8_desh_videsh.py"))
@@ -784,7 +786,7 @@ def build_chhattisgarh_page2_10stories(date_label: str = None, date_str: str = "
     mod.connect_page_designer()
     grid = mod.AdityaBharatPage8Grid()
 
-    if os.environ.get("AB_NO_CLOSE") != "1":
+    if os.environ.get("AB_NO_CLOSE") != "1" and os.environ.get("AB_SKIP_FILE_NEW") != "1":
         for _ in range(8):
             try:
                 mod.cmd("file.close", {"save": False})
@@ -1075,8 +1077,10 @@ def build_chhattisgarh_page2_10stories(date_label: str = None, date_str: str = "
 def build_chhattisgarh_page3_10stories(date_label: str = None, date_str: str = "18-11-2026", force_fresh_live: bool = False) -> dict:
     t0 = time.perf_counter()
     data = harvest_chhattisgarh_news_for_date(date_str, force_fresh_live=force_fresh_live)
+    city_map = {"RAIPUR": "रायपुर", "BILASPUR": "बिलासपुर", "RAJNANDGAON": "राजनांदगांव", "INDORE": "इंदौर", "BHOPAL": "भोपाल", "NEW_DELHI": "नई दिल्ली", "JAIPUR": "जयपुर"}
+    ed_city = city_map.get(os.environ.get("AB_EDITION", "RAIPUR").strip().upper(), "रायपुर")
     if not date_label:
-        date_label = data.get("dateline_hi", format_hindi_dateline(date_str)) + "  |"
+        date_label = f"{ed_city}, {data.get('dateline_hi', format_hindi_dateline(date_str))}  |"
     p3_stories = [s for s in data["stories"] if s["page"] == 3]
 
     spec = importlib.util.spec_from_file_location("ab_base_p8_for_p3", str(VAULT_DIR / "build_aditya_bharat_page8_desh_videsh.py"))
@@ -1087,7 +1091,7 @@ def build_chhattisgarh_page3_10stories(date_label: str = None, date_str: str = "
     mod.connect_page_designer()
     grid = mod.AdityaBharatPage8Grid()
 
-    if os.environ.get("AB_NO_CLOSE") != "1":
+    if os.environ.get("AB_NO_CLOSE") != "1" and os.environ.get("AB_SKIP_FILE_NEW") != "1":
         for _ in range(8):
             try:
                 mod.cmd("file.close", {"save": False})
@@ -1473,4 +1477,12 @@ def build_both_chhattisgarh_pages_2_and_3(date_str: str = "18-11-2026", force_fr
 
 
 if __name__ == "__main__":
-    build_both_chhattisgarh_pages_2_and_3()
+    import sys
+    d_arg = sys.argv[1] if (len(sys.argv) > 1 and not sys.argv[1].startswith("--")) else os.environ.get("AB_EDITION_DATE", "20-11-2026")
+    sp_env = os.environ.get("AB_TARGET_SPREAD", "")
+    if "--page2" in sys.argv or sp_env == "1":
+        build_chhattisgarh_page2_10stories(date_str=d_arg, force_fresh_live=False)
+    elif "--page3" in sys.argv or sp_env == "2":
+        build_chhattisgarh_page3_10stories(date_str=d_arg, force_fresh_live=False)
+    else:
+        build_both_chhattisgarh_pages_2_and_3(date_str=d_arg)

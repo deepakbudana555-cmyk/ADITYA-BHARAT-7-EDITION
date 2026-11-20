@@ -158,6 +158,16 @@ def fetch_google_news_hindi_rss(query: str, max_items: int = 12, max_words: int 
 
 def harvest_all_8_pages_original_live_news_at_1030pm(date_str: str) -> dict:
     """
+    Delegates directly to the Chief Hindi Sub-Editor Engine (`ab_chief_hindi_subeditor_engine.py`)
+    so all 8 pages (Pages 01..08) get 100% grammatically complete Hindi headlines, subheads,
+    highlight boxes, and fresh news bodies from live RSS feeds with 0% cross-page duplication.
+    """
+    import ab_chief_hindi_subeditor_engine as subed
+    return subed.run_chief_hindi_subeditor_for_all_8_pages(date_str)
+
+
+def _legacy_harvest_all_8_pages_original_live_news_at_1030pm(date_str: str) -> dict:
+    """
     Pulls fresh live original Hindi news across all 4 states and all 8 pages at 10:30 PM,
     updates the active runtime story pools in-memory and on disk in `daily_harvester_cache`,
     and guarantees 0% cross-page duplication.

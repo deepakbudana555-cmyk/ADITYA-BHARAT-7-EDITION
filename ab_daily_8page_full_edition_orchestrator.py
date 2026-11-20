@@ -109,8 +109,8 @@ def _connect_pd():
 
 DAILY_8_PAGE_ENGINES = [
     ("Page 01 — फ्रंट पेज (11 खबरें • 4 Dummies + CM/State)", "ab_front_page1_4dummies_engine.py", "Aditya_Bharat_Page_01_CMYK_34x53.pdf"),
-    ("Page 02 — छत्तीसगढ़ राजधानी (10 खबरें)", "build_aditya_bharat_page2.py", "Aditya_Bharat_Page_02_Mahanagar_CMYK_34x53.pdf"),
-    ("Page 03 — छत्तीसगढ़ प्रादेशिक (10 खबरें)", "build_aditya_bharat_page3.py", "Aditya_Bharat_Page_03_Pradeshik_CMYK_34x53.pdf"),
+    ("Page 02 — छत्तीसगढ़ राजधानी (10 खबरें)", "ab_chhattisgarh_10x2_engine.py", "Aditya_Bharat_Page_02_Mahanagar_CMYK_34x53.pdf"),
+    ("Page 03 — छत्तीसगढ़ प्रादेशिक (10 खबरें)", "ab_chhattisgarh_10x2_engine.py", "Aditya_Bharat_Page_03_Pradeshik_CMYK_34x53.pdf"),
     ("Page 04 — संपादकीय (Daily Articles + गीता श्लोक + मंथन)", "build_aditya_bharat_page5_edit.py", "Aditya_Bharat_Page_04_Sampadakiya_CMYK_34x53.pdf"),
     ("Page 05 — प्रादेशिक (MP + CG + RJ + DL • 12 खबरें)", "ab_pradeshik_page5_12news_engine.py", "Aditya_Bharat_Page_05_Pradeshik_CMYK_34x53.pdf"),
     ("Page 06 — कारोबार (Full-Page Business • 9 खबरें + बाजार मीटर)", "build_aditya_bharat_page6_business.py", "Aditya_Bharat_Page_06_Karobar_CMYK_34x53.pdf"),
@@ -357,6 +357,16 @@ def build_all_7_editions_4_states_with_single_vector_pdfs(
     pub_dir.mkdir(parents=True, exist_ok=True)
     art_dir = Path(r"C:\Users\ADMIN\.gemini\antigravity\brain\8707c72d-58b0-4715-a099-3efffcd57514")
     art_dir.mkdir(parents=True, exist_ok=True)
+
+    # Step 0: Always ensure the Chief Hindi Sub-Editor Engine has prepared fresh, complete headlines & bodies for all 8 pages!
+    subedit_report_path = VAULT_DIR / "daily_harvester_cache" / f"{date_str}_CHIEF_SUBEDITOR_REPORT.json"
+    if not subedit_report_path.exists():
+        _notify(f"✍️ [Chief Hindi Sub-Editor] दिनांक {date_str} के सभी 8 पेजों (Pages 01..08) की ताज़ा खबरें व पूर्ण हेडलाइंस तैयार की जा रही हैं...")
+        try:
+            import ab_chief_hindi_subeditor_engine as subed
+            subed.run_chief_hindi_subeditor_for_all_8_pages(date_str)
+        except Exception as e:
+            print(f"[WARN] Chief Hindi Sub-Editor run warning: {e}")
 
     # Step 1: Create 8-page base template and draw Inside Pages 02..07 (Spreads 1..6) ONCE
     _notify("⏳ [Step 1/2] सभी 7 संस्करणों के लिए साझा अंदरूनी पेज (Pages 02 to 07) तैयार किए जा रहे हैं...")
@@ -690,10 +700,10 @@ def run_1030pm_night_desk_auto_edition_job(
             print(f"[WARN] GitHub Cloud API dispatch warning: {e}")
 
     try:
-        import ab_night_desk_1030pm_live_harvester as live_1030
-        live_1030.harvest_all_8_pages_original_live_news_at_1030pm(target_edition_date)
+        import ab_chief_hindi_subeditor_engine as subed
+        subed.run_chief_hindi_subeditor_for_all_8_pages(target_edition_date)
     except Exception as e:
-        print(f"[WARN] 10:30 PM unified live harvest warning: {e}")
+        print(f"[WARN] 10:30 PM Chief Hindi Sub-Editor warning: {e}")
 
     res = build_all_7_editions_4_states_with_single_vector_pdfs(
         date_str=target_edition_date,
